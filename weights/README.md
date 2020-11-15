@@ -6,8 +6,8 @@ There are 5 models including yolo-v3-spp, and tiny-yolo-v3-spp.
 
 The link is as following: 
 
-link: hold on ...
+Link: //pan.baidu.com/s/12ldiDqmgQtCnNhsks-_xtQ 
 
-password: hold on ... 
+Password: 4vup 
 
 I will upload all models to googledrive.
