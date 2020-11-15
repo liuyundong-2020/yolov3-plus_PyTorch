@@ -6,7 +6,7 @@ In this project, you can enjoy:
 - yolo-v3-spp
 - tiny-yolo-v3-spp
 
-# YOLOv3
+# YOLOv3-SPP
 I try to reproduce YOLOv3 with SPP module.
 
 VOC:
