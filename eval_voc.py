@@ -36,6 +36,8 @@ parser.add_argument('-v', '--version', default='yolo_v3_spp',
                     help='yolo_v3_spp, tiny_yolo_v3_spp.')
 parser.add_argument('-d', '--dataset', default='VOC',
                     help='VOC or COCO dataset')
+parser.add_argument('-size', '--input_size', default=416, type=int, 
+                    help='Batch size for training')
 parser.add_argument('--trained_model', type=str,
                     default='weights_yolo_v2/yolo_v2_72.2.pth', 
                     help='Trained state_dict file path to open')
@@ -403,7 +405,7 @@ if __name__ == '__main__':
     num_classes = len(labelmap)
 
     cfg = config.voc_ab
-    input_size = cfg['min_dim']
+    input_size = [args.input_size, args.input_size]
     if args.version == 'yolo_v3_spp':
         from models.yolo_v3_spp import YOLOv3SPP
         net = YOLOv3SPP(device, input_size=input_size, num_classes=num_classes, anchor_size=config.MULTI_ANCHOR_SIZE)

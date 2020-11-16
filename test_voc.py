@@ -18,6 +18,8 @@ parser.add_argument('-v', '--version', default='yolo_v3_spp',
                     help='yolo_v3_spp, tiny_yolo_v3_spp')
 parser.add_argument('-d', '--dataset', default='VOC',
                     help='VOC or COCO dataset')
+parser.add_argument('-size', '--input_size', default=416, type=int, 
+                    help='Batch size for training')
 parser.add_argument('--trained_model', default='weight/voc/',
                     type=str, help='Trained state_dict file path to open')
 parser.add_argument('--visual_threshold', default=0.3, type=float,
@@ -78,9 +80,8 @@ def test():
         device = torch.device("cpu")
 
     # load net
-    cfg = config.voc_ab
     num_classes = len(VOC_CLASSES)
-    input_size = cfg['min_dim']
+    input_size = [args.input_size, args.input_size]
     testset = VOCDetection(args.voc_root, [('2007', 'test')], BaseTransform(input_size))
 
     if args.version == 'yolo_v3_spp':

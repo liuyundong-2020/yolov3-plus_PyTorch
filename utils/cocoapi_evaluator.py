@@ -93,7 +93,7 @@ class COCOAPIEvaluator():
                 img_ = img
                 offset = np.zeros([1, 4])
                 
-            x = torch.from_numpy(self.transform(img)[0][:, :, (2, 1, 0)]).permute(2, 0, 1)
+            x = torch.from_numpy(self.transform(img_)[0][:, :, (2, 1, 0)]).permute(2, 0, 1)
             x = x.unsqueeze(0).to(self.device)
             
             id_ = int(id_)

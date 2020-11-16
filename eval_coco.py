@@ -23,6 +23,8 @@ parser.add_argument('-v', '--version', default='yolo_v3_spp',
                     help='yolo_v3_spp, tiny_yolo_v3_spp')
 parser.add_argument('-t', '--testset', action='store_true', default=False,
                     help='COCO_val, COCO_test-dev dataset')
+parser.add_argument('-size', '--input_size', default=416, type=int, 
+                    help='Batch size for training')
 parser.add_argument('--dataset_root', default='/home/k545/object-detection/dataset/COCO/', 
                     help='Location of COCO root directory')
 parser.add_argument('--trained_model', default='weights/coco/', type=str,
@@ -40,26 +42,25 @@ parser.add_argument('--debug', action='store_true', default=False,
 args = parser.parse_args()
 data_dir = args.dataset_root
 
-def test(model, device):
-    global cfg
+def test(model, input_size, device):
     if args.testset:
         print('test on test-dev 2017')
         evaluator = COCOAPIEvaluator(
                         data_dir=data_dir,
-                        img_size=cfg['min_dim'],
+                        img_size=input_size,
                         device=device,
                         testset=True,
-                        transform=BaseTransform(cfg['min_dim'], mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229))
+                        transform=BaseTransform(input_size, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229))
                         )
 
     else:
         # eval
         evaluator = COCOAPIEvaluator(
                         data_dir=data_dir,
-                        img_size=cfg['min_dim'],
+                        img_size=input_size,
                         device=device,
                         testset=False,
-                        transform=BaseTransform(cfg['min_dim'], mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229))
+                        transform=BaseTransform(input_size, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229))
                         )
 
     # COCO evaluation
@@ -69,9 +70,8 @@ def test(model, device):
 
 
 if __name__ == '__main__':
-    global cfg
 
-    cfg = coco_ab
+    input_size = [args.input_size, args.input_size]
     if args.cuda:
         print('use cuda')
         torch.backends.cudnn.benchmark = True
@@ -81,12 +81,12 @@ if __name__ == '__main__':
     
     if args.version == 'yolo_v3_spp':
         from models.yolo_v3_spp import YOLOv3SPP
-        model = YOLOv3SPP(device, input_size=cfg['min_dim'], num_classes=args.num_classes, anchor_size=MULTI_ANCHOR_SIZE_COCO)
+        model = YOLOv3SPP(device, input_size=input_size, num_classes=args.num_classes, anchor_size=MULTI_ANCHOR_SIZE_COCO)
 
     elif args.version == 'tiny_yolo_v3_spp':
         from models.tiny_yolo_v3_spp import YOLOv3SPPtiny
     
-        model = YOLOv3SPPtiny(device, input_size=cfg['min_dim'], num_classes=args.num_classes, anchor_size=TINY_MULTI_ANCHOR_SIZE_COCO)
+        model = YOLOv3SPPtiny(device, input_size=input_size, num_classes=args.num_classes, anchor_size=TINY_MULTI_ANCHOR_SIZE_COCO)
     
     else:
         print('Unknown Version !!!')
@@ -97,4 +97,4 @@ if __name__ == '__main__':
     model.eval().to(device)
     print('Finished loading model!')
 
-    test(model, device)
+    test(model, input_size, device)

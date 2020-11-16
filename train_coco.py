@@ -110,16 +110,16 @@ def train():
     # build model
     if args.version == 'yolo_v3_spp':
         from models.yolo_v3_spp import YOLOv3SPP
-        total_anchor_size = MULTI_ANCHOR_SIZE_COCO
+        anchor_size = MULTI_ANCHOR_SIZE_COCO
         
-        yolo_net = YOLOv3SPP(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=total_anchor_size, hr=hr)
+        yolo_net = YOLOv3SPP(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr)
         print('Let us train yolo-v3-spp on the COCO dataset ......')
 
     elif args.version == 'tiny_yolo_v3_spp':
         from models.tiny_yolo_v3_spp import YOLOv3SPPtiny
-        total_anchor_size = TINY_MULTI_ANCHOR_SIZE_COCO
+        anchor_size = TINY_MULTI_ANCHOR_SIZE_COCO
     
-        yolo_net = YOLOv3SPPtiny(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=total_anchor_size, hr=hr)
+        yolo_net = YOLOv3SPPtiny(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr)
         print('Let us train tiny-yolo-v3-spp on the COCO dataset ......')
 
     else:
@@ -243,7 +243,7 @@ def train():
 
             # make train label
             targets = [label.tolist() for label in targets]
-            targets = tools.multi_gt_creator(input_size, yolo_net.stride, targets, version=args.version)
+            targets = tools.multi_gt_creator(input_size, yolo_net.stride, targets, anchor_size=anchor_size)
             targets = torch.tensor(targets).float().to(device)
 
             # forward and loss

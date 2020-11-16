@@ -87,33 +87,6 @@ def generate_anchor(input_size, stride, anchor_scale, anchor_aspect):
     return total_anchor_size
 
 
-def get_total_anchor_size(multi_level=False, name='VOC', version=None):
-    if name == 'VOC':
-        if multi_level:
-            if version == 'yolo_v3_spp':
-                all_anchor_size = MULTI_ANCHOR_SIZE
-            elif version == 'tiny_yolo_v3_spp':
-                all_anchor_size = TINY_MULTI_ANCHOR_SIZE
-            else:
-                print('Unknown Version !!!')
-                exit(0)
-        else:
-            all_anchor_size = ANCHOR_SIZE
-    elif name == 'COCO':
-        if multi_level:
-            if version == 'yolo_v3_spp':
-                all_anchor_size = MULTI_ANCHOR_SIZE_COCO
-            elif version == 'tiny_yolo_v3_spp':
-                all_anchor_size = TINY_MULTI_ANCHOR_SIZE_COCO
-            else:
-                print('Unknown Version !!!')
-                exit(0)
-        else:
-            all_anchor_size = ANCHOR_SIZE_COCO
-
-    return all_anchor_size
-
-
 def compute_iou(anchor_boxes, gt_box):
     """
     Input:
@@ -174,7 +147,7 @@ def set_anchors(anchor_size):
     return anchor_boxes
 
 
-def multi_gt_creator(input_size, strides, label_lists=[], name='VOC', version=None):
+def multi_gt_creator(input_size, strides, label_lists=[], anchor_size=None):
     """creator multi scales gt"""
     # prepare the all empty gt datas
     batch_size = len(label_lists)
@@ -183,7 +156,7 @@ def multi_gt_creator(input_size, strides, label_lists=[], name='VOC', version=No
     gt_tensor = []
 
     # generate gt datas
-    all_anchor_size = get_total_anchor_size(multi_level=True, name=name, version=version)
+    all_anchor_size = anchor_size # get_total_anchor_size(multi_level=True, name=name, version=version)
     anchor_number = len(all_anchor_size) // num_scale
     for s in strides:
         gt_tensor.append(np.zeros([batch_size, h//s, w//s, anchor_number, 1+1+4+1+4]))

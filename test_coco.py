@@ -17,6 +17,8 @@ parser.add_argument('-v', '--version', default='yolo_v3_spp',
                     help='yolo_v3_spp, tiny_yolo_v3_spp')
 parser.add_argument('-d', '--dataset', default='COCO',
                     help='we use VOC-test or COCO-val to test.')
+parser.add_argument('-size', '--input_size', default=416, type=int, 
+                    help='Batch size for training')
 parser.add_argument('--trained_model', default='weights/yolo_v2_72.2.pth',
                     type=str, help='Trained state_dict file path to open')
 parser.add_argument('--visual_threshold', default=0.3, type=float,
@@ -72,7 +74,7 @@ def test_net(net, device, testset, thresh, mode='voc'):
         x = img_tensor.unsqueeze(0).to(device)
 
         t0 = time.clock()
-        bboxes, scores, cls_inds = net(img_tensor)
+        bboxes, scores, cls_inds = net(x)
         print("detection time used ", Decimal(time.clock()) - Decimal(t0), "s")
         # scale each detection back up to the image
         max_line = max(h, w)
@@ -111,28 +113,28 @@ def test():
 
     # load net
     num_classes = 80
+    input_size = [args.input_size, args.input_size]
+
     if args.dataset == 'COCO':
-        cfg = config.coco_ab
         testset = COCODataset(
                     data_dir=args.dataset_root,
                     json_file='instances_val2017.json',
                     name='val2017',
-                    img_size=cfg['min_dim'][0],
-                    transform=BaseTransform(cfg['min_dim']),
+                    img_size=input_size[0],
+                    transform=BaseTransform(input_size),
                     debug=args.debug)
     elif args.dataset == 'VOC':
-        cfg = config.voc_ab
-        testset = VOCDetection(VOC_ROOT, [('2007', 'test')], BaseTransform(cfg['min_dim']))
+        testset = VOCDetection(VOC_ROOT, [('2007', 'test')], BaseTransform(input_size))
     
 
     if args.version == 'yolo_v3_spp':
         from models.yolo_v3_spp import YOLOv3SPP
-        net = YOLOv3SPP(device, input_size=cfg['min_dim'], num_classes=num_classes, anchor_size=config.MULTI_ANCHOR_SIZE_COCO)
+        net = YOLOv3SPP(device, input_size=input_size, num_classes=num_classes, anchor_size=config.MULTI_ANCHOR_SIZE_COCO)
    
     elif args.version == 'tiny_yolo_v3_spp':
         from models.tiny_yolo_v3_spp import YOLOv3SPPtiny
     
-        net = YOLOv3SPPtiny(device, input_size=cfg['min_dim'], num_classes=num_classes, anchor_size=config.TINY_MULTI_ANCHOR_SIZE_COCO)
+        net = YOLOv3SPPtiny(device, input_size=input_size, num_classes=num_classes, anchor_size=config.TINY_MULTI_ANCHOR_SIZE_COCO)
 
     net.load_state_dict(torch.load(args.trained_model, map_location='cuda'))
     net.to(device).eval()
