@@ -22,11 +22,11 @@ COCO:
 <table><tbody>
 <tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> data </td><td bgcolor=white> AP </td><td bgcolor=white> AP50 </td><td bgcolor=white> AP75 </td><td bgcolor=white> AP_S </td><td bgcolor=white> AP_M </td><td bgcolor=white> AP_L </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-320</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> - </td><td bgcolor=white> - </td><td bgcolor=white> - </td><td bgcolor=white> - </td><td bgcolor=white> - </td><td bgcolor=white> - </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-SPP-320</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 31.7 </td><td bgcolor=white> 52.6 </td><td bgcolor=white> 32.9 </td><td bgcolor=white> 10.9 </td><td bgcolor=white> 33.2 </td><td bgcolor=white> 48.6 </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-416</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 34.6 </td><td bgcolor=white> 56.1 </td><td bgcolor=white> 36.3 </td><td bgcolor=white> 14.7 </td><td bgcolor=white> 36.2 </td><td bgcolor=white> 50.1 </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-SPP-416</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 34.6 </td><td bgcolor=white> 56.1 </td><td bgcolor=white> 36.3 </td><td bgcolor=white> 14.7 </td><td bgcolor=white> 36.2 </td><td bgcolor=white> 50.1 </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-608</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> - </td><td bgcolor=white> - </td><td bgcolor=white> - </td><td bgcolor=white> - </td><td bgcolor=white> - </td><td bgcolor=white> - </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-SPP-608</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 37.1 </td><td bgcolor=white> 58.9 </td><td bgcolor=white> 39.3 </td><td bgcolor=white> 19.6 </td><td bgcolor=white> 39.5 </td><td bgcolor=white> 48.5 </td></tr>
 </table></tbody>
 
 So, just have fun !
