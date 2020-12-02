@@ -150,8 +150,9 @@ if __name__ == "__main__":
     input_size = 416
     # dataset = VOCDetection(root=VOC_ROOT,
     #                     transform=BaseTransform([416, 416]))
+    
     dataset = COCODataset(
-                  data_dir='/home/jxk/object-detection/dataset/COCO/',
+                  data_dir='/home/k545/object-detection/dataset/COCO/',
                   img_size=input_size,
                   transform=None,
                   debug=None)
@@ -179,7 +180,10 @@ if __name__ == "__main__":
             # bh = (ymax - ymin) / h * input_size
             bw = (xmax - xmin) / max(w, h) * input_size
             bh = (ymax - ymin) / max(w, h) * input_size
-            boxes.append(Box(0, 0, bw, bh))
+            if bw <= 1.0 or bh <= 1.0:
+                continue
+            else:
+                boxes.append(Box(0, 0, bw, bh))
     # for i in range(5):
     #     w, h = 2*(i+1)+np.random.randint(5), 2*(i+1)+np.random.randint(5)
     #     print(w, h)
