@@ -104,6 +104,12 @@ def train():
         
         yolo_net = YOLOv3SPP(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr)
         print('Let us train yolo-v3-spp on the VOC0712 dataset ......')
+    elif args.version == 'yolo_v3_plus':
+        from models.yolo_v3_plus import YOLOv3Plus
+        anchor_size = MULTI_ANCHOR_SIZE
+        
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr)
+        print('Let us train yolo-v3-plus on the VOC0712 dataset ......')
 
     elif args.version == 'tiny_yolo_v3_spp':
         from models.tiny_yolo_v3_spp import YOLOv3SPPtiny

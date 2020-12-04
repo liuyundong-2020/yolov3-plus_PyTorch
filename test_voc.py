@@ -87,7 +87,11 @@ def test():
     if args.version == 'yolo_v3_spp':
         from models.yolo_v3_spp import YOLOv3SPP
         net = YOLOv3SPP(device, input_size=input_size, num_classes=num_classes, anchor_size=config.MULTI_ANCHOR_SIZE)
-    
+
+    elif args.version == 'yolo_v3_plus':
+        from models.yolo_v3_plus import YOLOv3Plus
+        net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, anchor_size=config.MULTI_ANCHOR_SIZE)
+
     elif args.version == 'tiny_yolo_v3_spp':
         from models.tiny_yolo_v3_spp import YOLOv3SPPtiny
     
