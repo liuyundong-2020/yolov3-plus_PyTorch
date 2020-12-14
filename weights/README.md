@@ -6,7 +6,7 @@ There are 5 models including yolo_v3_spp, yolo_v3_plus, yolo_v3_slim.
 
 The link is as following: 
 
-Link: //pan.baidu.com/s/12ldiDqmgQtCnNhsks-_xtQ 
+Link: https://pan.baidu.com/s/12ldiDqmgQtCnNhsks-_xtQ 
 
 Password: 4vup 
 
