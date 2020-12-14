@@ -46,7 +46,7 @@ On COCO eval:
 </table></tbody>
 
 
-# YOLOv3-Slum
+# YOLOv3-Slim
 I'm trying to provide a lightweight detector
 
 Hold on:
@@ -54,9 +54,9 @@ Hold on:
 <table><tbody>
 <tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> data </td><td bgcolor=white> AP </td><td bgcolor=white> AP50 </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slum-416</th><td bgcolor=white> COCO eval </td><td bgcolor=white> - </td><td bgcolor=white> - </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slim-416</th><td bgcolor=white> COCO eval </td><td bgcolor=white> - </td><td bgcolor=white> - </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slum-608</th><td bgcolor=white> COCO eval </td><td bgcolor=white> - </td><td bgcolor=white> - </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slim-608</th><td bgcolor=white> COCO eval </td><td bgcolor=white> - </td><td bgcolor=white> - </td></tr>
 </table></tbody>
 
 </table></tbody>
