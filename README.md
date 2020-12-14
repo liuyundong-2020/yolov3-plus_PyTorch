@@ -4,7 +4,8 @@ A better PyTorch version of YOLOv3.
 
 In this project, you can enjoy: 
 - yolo-v3-spp
-- tiny-yolo-v3-spp
+- yolo-v3-plus
+- yolo-v3-slim
 
 # YOLOv3-SPP
 I try to reproduce YOLOv3 with SPP module.
@@ -31,15 +32,32 @@ COCO:
 
 So, just have fun !
 
-# Tiny YOLOv3-SPP
+# YOLOv3-Plus
+I add PAN module into the above YOLOv3-SPP, and get a better detector:
+
+On COCO eval:
+
+<table><tbody>
+<tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> data </td><td bgcolor=white> AP </td><td bgcolor=white> AP50 </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-SPP-416</th><td bgcolor=white> COCO eval </td><td bgcolor=white> 37.40 </td><td bgcolor=white> 57.42 </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-SPP-608</th><td bgcolor=white> COCO eval </td><td bgcolor=white> 40.02 </td><td bgcolor=white> 60.45 </td></tr>
+</table></tbody>
+
+
+# YOLOv3-Slum
+I'm trying to provide a lightweight detector
+
 Hold on:
 
 <table><tbody>
-<tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> data </td><td bgcolor=white> AP </td><td bgcolor=white> AP50 </td><td bgcolor=white> AP75 </td><td bgcolor=white> AP_S </td><td bgcolor=white> AP_M </td><td bgcolor=white> AP_L </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> data </td><td bgcolor=white> AP </td><td bgcolor=white> AP50 </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> (official) YOLOv3-tiny </th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> - </td><td bgcolor=white> - </td><td bgcolor=white> - </td><td bgcolor=white>- </td><td bgcolor=white> - </td><td bgcolor=white> - </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slum-416</th><td bgcolor=white> COCO eval </td><td bgcolor=white> - </td><td bgcolor=white> - </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> (Our) YOLOv3-tiny </th><td bgcolor=white> COCO val </td><td bgcolor=white> - </td><td bgcolor=white> - </td><td bgcolor=white> - </td><td bgcolor=white> - </td><td bgcolor=white> - </td><td bgcolor=white> - </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slum-608</th><td bgcolor=white> COCO eval </td><td bgcolor=white> - </td><td bgcolor=white> - </td></tr>
+</table></tbody>
 
 </table></tbody>
 
