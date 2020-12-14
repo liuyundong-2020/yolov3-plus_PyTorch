@@ -1,8 +1,8 @@
-# yolo_v3_spp and tiny_yolo_v3_spp
+# yolo_v3_spp, yolo_v3_plus, yolo_v3_slim
 Hi, guys ! 
 
 For researchers in China, you can download them from BaiduYunDisk. 
-There are 5 models including yolo-v3-spp, and tiny-yolo-v3-spp.
+There are 5 models including yolo_v3_spp, yolo_v3_plus, yolo_v3_slim.
 
 The link is as following: 
 
