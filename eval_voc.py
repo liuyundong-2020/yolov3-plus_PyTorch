@@ -33,7 +33,7 @@ def str2bool(v):
 parser = argparse.ArgumentParser(
     description='YOLO-v2 Detector Evaluation')
 parser.add_argument('-v', '--version', default='yolo_v3_spp',
-                    help='yolo_v3_spp, tiny_yolo_v3_spp.')
+                    help='yolo_v3_spp, yolo_v3_slim.')
 parser.add_argument('-d', '--dataset', default='VOC',
                     help='VOC or COCO dataset')
 parser.add_argument('-size', '--input_size', default=416, type=int, 
@@ -414,10 +414,10 @@ if __name__ == '__main__':
         from models.yolo_v3_plus import YOLOv3Plus
         net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, anchor_size=config.MULTI_ANCHOR_SIZE)
     
-    elif args.version == 'tiny_yolo_v3_spp':
-        from models.tiny_yolo_v3_spp import YOLOv3SPPtiny
-        net = YOLOv3SPPtiny(device, input_size=input_size, num_classes=num_classes, anchor_size=config.TINY_MULTI_ANCHOR_SIZE)
-        print('Let us eval tiny-yolo-v3-spp on the VOC0712 dataset ......')
+    elif args.version == 'yolo_v3_slim':
+        from models.yolo_v3_slim import YOLOv3Slim
+        net = YOLOv3Slim(device, input_size=input_size, num_classes=num_classes, anchor_size=config.MULTI_ANCHOR_SIZE)
+        print('Let us eval yolo_v3_slim on the VOC0712 dataset ......')
 
     # load net
     net.load_state_dict(torch.load(args.trained_model, map_location='cuda'))

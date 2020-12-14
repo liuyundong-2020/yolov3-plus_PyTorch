@@ -20,7 +20,7 @@ import torch.optim as optim
 
 parser = argparse.ArgumentParser(description='YOLO Detection')
 parser.add_argument('-v', '--version', default='yolo_v3_spp',
-                    help='yolo_v3_spp, tiny_yolo_v3_spp')
+                    help='yolo_v3_spp, yolo_v3_slim')
 parser.add_argument('-t', '--testset', action='store_true', default=False,
                     help='COCO_val, COCO_test-dev dataset')
 parser.add_argument('-size', '--input_size', default=416, type=int, 
@@ -85,12 +85,12 @@ if __name__ == '__main__':
 
     elif args.version == 'yolo_v3_plus':
         from models.yolo_v3_plus import YOLOv3Plus
-        net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, anchor_size=config.MULTI_ANCHOR_SIZE_COCO)
+        model = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, anchor_size=MULTI_ANCHOR_SIZE_COCO)
 
-    elif args.version == 'tiny_yolo_v3_spp':
-        from models.tiny_yolo_v3_spp import YOLOv3SPPtiny
+    elif args.version == 'yolo_v3_slim':
+        from models.yolo_v3_slim import YOLOv3Slim
     
-        model = YOLOv3SPPtiny(device, input_size=input_size, num_classes=args.num_classes, anchor_size=TINY_MULTI_ANCHOR_SIZE_COCO)
+        model = YOLOv3Slim(device, input_size=input_size, num_classes=args.num_classes, anchor_size=MULTI_ANCHOR_SIZE_COCO)
     
     else:
         print('Unknown Version !!!')

@@ -5,49 +5,39 @@ import os
 
 
 
-def get_device(gpu_ind):
-    if torch.cuda.is_available():
-        print('Let us use GPU.')
-        cudnn.benchmark = True
-        if torch.cuda.device_count() == 1:
-            device = torch.device('cuda')
-        else:
-            device = torch.device('cuda:%d' % gpu_ind)
-    else:
-        print('Come on !! No GPU ?? Who gives you the courage to study Deep Learning ?')
-        device = torch.device('cpu')
-
-    return device
+class Hardswish(nn.Module):
+    @staticmethod
+    def forward(x):
+        return x * F.relu6(x + 3.0) / 6.0
 
 
-class Conv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, ksize, padding=0, stride=1, dilation=1, leakyReLU=False):
-        super(Conv2d, self).__init__()
+class Conv(nn.Module):
+    def __init__(self, c1, c2, k, s=1, p=0, d=1, g=1, leaky=True):
+        super(Conv, self).__init__()
         self.convs = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, ksize, stride=stride, padding=padding, dilation=dilation),
-            nn.BatchNorm2d(out_channels),
-            nn.LeakyReLU(0.1, inplace=True) if leakyReLU else nn.ReLU(inplace=True)
+            nn.Conv2d(c1, c2, k, stride=s, padding=p, dilation=d, groups=g),
+            nn.BatchNorm2d(c2),
+            nn.LeakyReLU(0.1, inplace=True) if leaky else nn.Identity()
         )
 
     def forward(self, x):
         return self.convs(x)
 
 
-class reorg_layer(nn.Module):
-    def __init__(self, stride):
-        super(reorg_layer, self).__init__()
-        self.stride = stride
+class SAM(nn.Module):
+    """ Parallel CBAM """
+    def __init__(self, in_ch):
+        super(SAM, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_ch, in_ch, 1),
+            nn.Sigmoid()           
+        )
 
     def forward(self, x):
-        batch_size, channels, height, width = x.size()
-        _height, _width = height // self.stride, width // self.stride
-        
-        x = x.view(batch_size, channels, _height, self.stride, _width, self.stride).transpose(3, 4).contiguous()
-        x = x.view(batch_size, channels, _height * _width, self.stride * self.stride).transpose(2, 3).contiguous()
-        x = x.view(batch_size, channels, self.stride * self.stride, _height, _width).transpose(1, 2).contiguous()
-        x = x.view(batch_size, -1, _height, _width)
+        """ Spatial Attention Module """
+        x_attention = self.conv(x)
 
-        return x
+        return x * x_attention
 
 
 class SPP(nn.Module):
@@ -66,22 +56,62 @@ class SPP(nn.Module):
         return x
 
 
+class UpSample(nn.Module):
+    def __init__(self, size=None, scale_factor=None, mode='nearest', align_corner=None):
+        super(UpSample, self).__init__()
+        self.size = size
+        self.scale_factor = scale_factor
+        self.mode = mode
+        self.align_corner = align_corner
+
+    def forward(self, x):
+        return torch.nn.functional.interpolate(x, size=self.size, scale_factor=self.scale_factor, 
+                                                mode=self.mode, align_corners=self.align_corner)
+
+
 # Copy from yolov5
 class Focus(nn.Module):
     """
         Focus module proposed by yolov5.
     """
     # Focus wh information into c-space
-    def __init__(self, in_ch, out_ch, ksize=1, stride=1, padding=None, groups=1, act=True):  # ch_in, ch_out, kernel, stride, padding, groups
+    def __init__(self, c1, c2, k=1, p=0, s=1, g=1, act=True):  # ch_in, ch_out, kernel, stride, padding, groups
         super(Focus, self).__init__()
-        self.conv = Conv2d(in_channels=in_ch, out_channels=out_ch, ksize=ksize, stride=stride, leakyReLU=act)
+        self.conv = Conv(c1 * 4, c2, k=k, s=s, p=p, g=g, act=act)
 
     def forward(self, x):  # x(B, C, H, W) -> y(B, 4C, H/2, W/2)
         return self.conv(torch.cat([x[..., ::2, ::2], x[..., 1::2, ::2], x[..., ::2, 1::2], x[..., 1::2, 1::2]], 1))
 
 
-# Mish https://github.com/digantamisra98/Mish
-class Mish(nn.Module):
-    @staticmethod
-    def forward(x):
-        return x * F.softplus(x).tanh()
+# Copy from yolov5
+class Bottleneck(nn.Module):
+    # Standard bottleneck
+    def __init__(self, c1, c2, shortcut=True, g=1, e=0.5):  # ch_in, ch_out, shortcut, groups, expansion
+        super(Bottleneck, self).__init__()
+        c_ = int(c2 * e)  # hidden channels
+        self.cv1 = Conv(c1, c_, k=1)
+        self.cv2 = Conv(c_, c2, k=3, p=1, g=g)
+        self.add = shortcut and c1 == c2
+
+    def forward(self, x):
+        return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
+
+
+# Copy from yolov5
+class BottleneckCSP(nn.Module):
+    # CSP Bottleneck https://github.com/WongKinYiu/CrossStagePartialNetworks
+    def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+        super(BottleneckCSP, self).__init__()
+        c_ = int(c2 * e)  # hidden channels
+        self.cv1 = Conv(c1, c_, k=1)
+        self.cv2 = nn.Conv2d(c1, c_, kernel_size=1, bias=False)
+        self.cv3 = nn.Conv2d(c_, c_, kernel_size=1, bias=False)
+        self.cv4 = Conv(2 * c_, c2, k=1)
+        self.bn = nn.BatchNorm2d(2 * c_)  # applied to cat(cv2, cv3)
+        self.act = nn.LeakyReLU(0.1, inplace=True)
+        self.m = nn.Sequential(*[Bottleneck(c_, c_, shortcut, g, e=1.0) for _ in range(n)])
+
+    def forward(self, x):
+        y1 = self.cv3(self.m(self.cv1(x)))
+        y2 = self.cv2(x)
+        return self.cv4(self.act(self.bn(torch.cat((y1, y2), dim=1))))

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils import Conv2d, SPP
+from utils import Conv, SPP
 from backbone import *
 import numpy as np
 import tools
@@ -32,37 +32,37 @@ class YOLOv3SPP(nn.Module):
         
         # s = 32
         self.conv_set_3 = nn.Sequential(
-            Conv2d(1024*4, 512, 1, leakyReLU=True),
-            Conv2d(512, 1024, 3, padding=1, leakyReLU=True),
-            Conv2d(1024, 512, 1, leakyReLU=True),
-            Conv2d(512, 1024, 3, padding=1, leakyReLU=True),
-            Conv2d(1024, 512, 1, leakyReLU=True),
+            Conv(1024*4, 512, 1),
+            Conv(512, 1024, 3, p=1),
+            Conv(1024, 512, 1),
+            Conv(512, 1024, 3, p=1),
+            Conv(1024, 512, 1)
         )
-        self.conv_1x1_3 = Conv2d(512, 256, 1, leakyReLU=True)
-        self.extra_conv_3 = Conv2d(512, 1024, 3, padding=1, leakyReLU=True)
+        self.conv_1x1_3 = Conv(512, 256, 1)
+        self.extra_conv_3 = Conv(512, 1024, 3, p=1)
         self.pred_3 = nn.Conv2d(1024, self.anchor_number*(1 + 4 + self.num_classes), 1)
 
         # s = 16
         self.conv_set_2 = nn.Sequential(
-            Conv2d(768, 256, 1, leakyReLU=True),
-            Conv2d(256, 512, 3, padding=1, leakyReLU=True),
-            Conv2d(512, 256, 1, leakyReLU=True),
-            Conv2d(256, 512, 3, padding=1, leakyReLU=True),
-            Conv2d(512, 256, 1, leakyReLU=True),
+            Conv(768, 256, 1),
+            Conv(256, 512, 3, p=1),
+            Conv(512, 256, 1),
+            Conv(256, 512, 3, p=1),
+            Conv(512, 256, 1)
         )
-        self.conv_1x1_2 = Conv2d(256, 128, 1, leakyReLU=True)
-        self.extra_conv_2 = Conv2d(256, 512, 3, padding=1, leakyReLU=True)
+        self.conv_1x1_2 = Conv(256, 128, 1)
+        self.extra_conv_2 = Conv(256, 512, 3, p=1)
         self.pred_2 = nn.Conv2d(512, self.anchor_number*(1 + 4 + self.num_classes), 1)
 
         # s = 8
         self.conv_set_1 = nn.Sequential(
-            Conv2d(384, 128, 1, leakyReLU=True),
-            Conv2d(128, 256, 3, padding=1, leakyReLU=True),
-            Conv2d(256, 128, 1, leakyReLU=True),
-            Conv2d(128, 256, 3, padding=1, leakyReLU=True),
-            Conv2d(256, 128, 1, leakyReLU=True),
+            Conv(384, 128, 1),
+            Conv(128, 256, 3, p=1),
+            Conv(256, 128, 1),
+            Conv(128, 256, 3, p=1),
+            Conv(256, 128, 1)
         )
-        self.extra_conv_1 = Conv2d(128, 256, 3, padding=1, leakyReLU=True)
+        self.extra_conv_1 = Conv(128, 256, 3, p=1)
         self.pred_1 = nn.Conv2d(256, self.anchor_number*(1 + 4 + self.num_classes), 1)
 
 
