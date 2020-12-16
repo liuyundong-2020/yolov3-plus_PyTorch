@@ -109,9 +109,6 @@ class VOCDetection(data.Dataset):
             for line in open(osp.join(rootpath, 'ImageSets', 'Main', name + '.txt')):
                 self.ids.append((rootpath, line.strip()))
 
-    def reset_transform(self, transform):
-        self.transform = transform
-
     def __getitem__(self, index):
         im, gt, h, w, offset, scale = self.pull_item(index)
 
@@ -119,6 +116,32 @@ class VOCDetection(data.Dataset):
 
     def __len__(self):
         return len(self.ids)
+
+    def preprocess(self, img, target, height, width):
+        # zero padding
+        if height > width:
+            img_ = np.zeros([height, height, 3])
+            delta_w = height - width
+            left = delta_w // 2
+            img_[:, left:left+width, :] = img
+            offset = np.array([[ left / height, 0.,  left / height, 0.]])
+            scale =  np.array([[width / height, 1., width / height, 1.]])
+
+        elif height < width:
+            img_ = np.zeros([width, width, 3])
+            delta_h = width - height
+            top = delta_h // 2
+            img_[top:top+height, :, :] = img
+            offset = np.array([[0.,    top / width, 0.,    top / width]])
+            scale =  np.array([[1., height / width, 1., height / width]])
+        
+        else:
+            img_ = img
+            scale =  np.array([[1., 1., 1., 1.]])
+            offset = np.zeros([1, 4])
+
+        return img_, scale, offset
+
 
     def pull_item(self, index):
         img_id = self.ids[index]
@@ -131,27 +154,8 @@ class VOCDetection(data.Dataset):
             target = self.target_transform(target, width, height)
 
         if self.transform is not None:
-            # zero padding
-            if height > width:
-                img_ = np.zeros([height, height, 3])
-                delta_w = height - width
-                left = delta_w // 2
-                img_[:, left:left+width, :] = img
-                offset = np.array([[ left / height, 0.,  left / height, 0.]])
-                scale =  np.array([[width / height, 1., width / height, 1.]])
-
-            elif height < width:
-                img_ = np.zeros([width, width, 3])
-                delta_h = width - height
-                top = delta_h // 2
-                img_[top:top+height, :, :] = img
-                offset = np.array([[0.,    top / width, 0.,    top / width]])
-                scale =  np.array([[1., height / width, 1., height / width]])
-            
-            else:
-                img_ = img
-                scale =  np.array([[1., 1., 1., 1.]])
-                offset = np.zeros([1, 4])
+            # preprocess
+            img_, scale, offset = self.preprocess(img, target, height, width)
 
             if len(target) == 0:
                 target = np.zeros([1, 5])
@@ -232,7 +236,7 @@ if __name__ == "__main__":
                             BaseTransform([416, 416], (0, 0, 0)),
                             VOCAnnotationTransform())
     for i in range(1000):
-        im, gt, h, w = dataset.pull_item(i)
+        im, gt, h, w, _, _ = dataset.pull_item(i)
         img = im.permute(1,2,0).numpy()[:, :, (2, 1, 0)].astype(np.uint8)
         for box in gt:
             xmin, ymin, xmax, ymax, _ = box
