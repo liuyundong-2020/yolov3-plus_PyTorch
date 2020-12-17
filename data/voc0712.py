@@ -11,6 +11,7 @@ import torch
 import torch.utils.data as data
 import cv2
 import numpy as np
+import random
 if sys.version_info[0] == 2:
     import xml.etree.cElementTree as ET
 else:
@@ -95,7 +96,7 @@ class VOCDetection(data.Dataset):
     def __init__(self, root,
                  image_sets=[('2007', 'trainval'), ('2012', 'trainval')],
                  transform=None, target_transform=VOCAnnotationTransform(),
-                 dataset_name='VOC0712'):
+                 dataset_name='VOC0712', mosaic=False):
         self.root = root
         self.image_set = image_sets
         self.transform = transform
@@ -104,6 +105,7 @@ class VOCDetection(data.Dataset):
         self._annopath = osp.join('%s', 'Annotations', '%s.xml')
         self._imgpath = osp.join('%s', 'JPEGImages', '%s.jpg')
         self.ids = list()
+        self.mosaic = mosaic
         for (year, name) in image_sets:
             rootpath = osp.join(self.root, 'VOC' + year)
             for line in open(osp.join(rootpath, 'ImageSets', 'Main', name + '.txt')):
@@ -142,7 +144,6 @@ class VOCDetection(data.Dataset):
 
         return img_, scale, offset
 
-
     def pull_item(self, index):
         img_id = self.ids[index]
 
@@ -153,6 +154,64 @@ class VOCDetection(data.Dataset):
         if self.target_transform is not None:
             target = self.target_transform(target, width, height)
 
+        # mosaic augmentation
+        if self.mosaic and np.random.randint(2):
+            ids_list_ = self.ids[:index] + self.ids[index+1:]
+            # random sample 3 indexs
+            id2, id3, id4 = random.sample(ids_list_, 3)
+            ids = [id2, id3, id4]
+            img_lists = [img]
+            tg_lists = [target]
+            for id_ in ids:
+                img_ = cv2.imread(self._imgpath % id_)
+                height_, width_, channels_ = img_.shape
+
+                target_ = ET.parse(self._annopath % id_).getroot()              
+                target_ = self.target_transform(target_, width_, height_)
+
+                img_lists.append(img_)
+                tg_lists.append(target_)
+            # preprocess
+            img_processed_lists = []
+            tg_processed_lists = []
+            for img, target in zip(img_lists, tg_lists):
+                h, w, _ = img.shape
+                img_, scale, offset = self.preprocess(img, target, h, w)
+                if len(target) == 0:
+                    target = np.zeros([1, 5])
+                else:
+                    target = np.array(target)
+                    target[:, :4] = target[:, :4] * scale + offset
+                # augmentation
+                img, boxes, labels = self.transform(img_, target[:, :4], target[:, 4])
+                # to rgb
+                img = img[:, :, (2, 1, 0)]
+                # img = img.transpose(2, 0, 1)
+                target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
+                img_processed_lists.append(img)
+                tg_processed_lists.append(target)
+            # Then, we use mosaic augmentation
+            img_size = self.transform.size[0]
+            mosaic_img = np.zeros([img_size*2, img_size*2, 3])
+            
+            img_1, img_2, img_3, img_4 = img_processed_lists
+            tg_1, tg_2, tg_3, tg_4 = tg_processed_lists
+            # stitch images
+            mosaic_img[:img_size, :img_size] = img_1
+            mosaic_img[:img_size, img_size:] = img_2
+            mosaic_img[img_size:, :img_size] = img_3
+            mosaic_img[img_size:, img_size:] = img_4
+            mosaic_img = cv2.resize(mosaic_img, (img_size, img_size))
+            # modify targets
+            tg_1[:, :4] /= 2.0
+            tg_2[:, :4] = (tg_2[:, :4] + np.array([1., 0., 1., 0.])) / 2.0
+            tg_3[:, :4] = (tg_3[:, :4] + np.array([0., 1., 0., 1.])) / 2.0
+            tg_4[:, :4] = (tg_4[:, :4] + 1.0) / 2.0
+            target = np.concatenate([tg_1, tg_2, tg_3, tg_4], axis=0)
+
+            return torch.from_numpy(mosaic_img).permute(2, 0, 1), target, height, width, offset, scale
+
+        # basic augmentation(SSDAugmentation or BaseTransform)
         if self.transform is not None:
             # preprocess
             img_, scale, offset = self.preprocess(img, target, height, width)
@@ -234,7 +293,7 @@ if __name__ == "__main__":
     # dataset
     dataset = VOCDetection(VOC_ROOT, [('2007', 'trainval')],
                             BaseTransform([416, 416], (0, 0, 0)),
-                            VOCAnnotationTransform())
+                            VOCAnnotationTransform(), mosaic=True)
     for i in range(1000):
         im, gt, h, w, _, _ = dataset.pull_item(i)
         img = im.permute(1,2,0).numpy()[:, :, (2, 1, 0)].astype(np.uint8)
