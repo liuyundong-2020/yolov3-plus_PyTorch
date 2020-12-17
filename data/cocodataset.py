@@ -263,7 +263,7 @@ class COCODataset(Dataset):
             tg_4[:, :4] = (tg_4[:, :4] + 1.0) / 2.0
             target = np.concatenate([tg_1, tg_2, tg_3, tg_4], axis=0)
 
-            return torch.from_numpy(mosaic_img).permute(2, 0, 1), target, height, width, offset, scale
+            return torch.from_numpy(mosaic_img).permute(2, 0, 1).float(), target, height, width, offset, scale
 
         if self.transform is not None:
             # preprocess
