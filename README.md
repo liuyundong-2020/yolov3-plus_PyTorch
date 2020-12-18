@@ -47,16 +47,18 @@ On COCO eval:
 
 
 # YOLOv3-Slim
-I'm trying to provide a lightweight detector
+I also provide a lightweight detector: YOLOv3-Slim.
 
-Hold on:
+It is very simple. The backbone network, darknet_tiny, consists of only 10 conv layers. The neck is SPP same to as the one used in my YOLOv3-Plus. And the head is FPN+PAN with less conv layers and conv kernels.
+
+COCO eval:
 
 <table><tbody>
 <tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> data </td><td bgcolor=white> AP </td><td bgcolor=white> AP50 </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slim-416</th><td bgcolor=white> COCO eval </td><td bgcolor=white> - </td><td bgcolor=white> - </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slim-416</th><td bgcolor=white> COCO eval </td><td bgcolor=white> 26.08 </td><td bgcolor=white> 45.65 </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slim-608</th><td bgcolor=white> COCO eval </td><td bgcolor=white> - </td><td bgcolor=white> - </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slim-608</th><td bgcolor=white> COCO eval </td><td bgcolor=white> 26.85 </td><td bgcolor=white> 47.58 </td></tr>
 </table></tbody>
 
 </table></tbody>
