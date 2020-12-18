@@ -40,6 +40,8 @@ def parse_args():
                         help='yes or no to choose using warmup strategy to train')
     parser.add_argument('--wp_epoch', type=int, default=2,
                         help='The upper bound of warm-up')
+    parser.add_argument('--mosaic', action='store_true', default=False,
+                        help='use mosaic augmentation.')
     parser.add_argument('--start_epoch', type=int, default=0,
                         help='start epoch to train')
     parser.add_argument('-r', '--resume', default=None, type=str, 
@@ -91,21 +93,45 @@ def train():
     else:
         device = torch.device("cpu")
 
+    if args.mosaic:
+        print("use Mosaic Augmentation ...")
+
+    # multi scale
     if args.multi_scale:
         print('Let us use the multi-scale trick.')
         input_size = [640, 640]
-        dataset = COCODataset(
-                    data_dir=data_dir,
-                    img_size=640,
-                    transform=SSDAugmentation(input_size, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229)),
-                    debug=args.debug)
     else:
-        input_size = cfg['min_dim']
-        dataset = COCODataset(
+        input_size = [416, 416]
+
+    print("Setting Arguments.. : ", args)
+    print("----------------------------------------------------------")
+    print('Loading the MSCOCO dataset...')
+    # dataset
+    dataset = COCODataset(
+                data_dir=data_dir,
+                img_size=input_size[0],
+                transform=SSDAugmentation(input_size, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229)),
+                debug=args.debug,
+                mosaic=args.mosaic)
+
+    # data loader
+    dataloader = torch.utils.data.DataLoader(
+                    dataset, 
+                    batch_size=args.batch_size, 
+                    shuffle=True, 
+                    collate_fn=detection_collate,
+                    num_workers=args.num_workers)
+
+    # cocoapi evaluator
+    evaluator = COCOAPIEvaluator(
                     data_dir=data_dir,
-                    img_size=cfg['min_dim'][0],
-                    transform=SSDAugmentation(cfg['min_dim'], mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229)),
-                    debug=args.debug)
+                    img_size=cfg['min_dim'],
+                    device=device,
+                    transform=BaseTransform(cfg['min_dim'])
+                    )
+    print('Training model on:', dataset.name)
+    print('The dataset size:', len(dataset))
+    print("----------------------------------------------------------")
 
     # build model
     if args.version == 'yolo_v3_plus':
@@ -133,15 +159,14 @@ def train():
         print('Unknown version !!!')
         exit()
 
-    
-    print("Setting Arguments.. : ", args)
-    print("----------------------------------------------------------")
-    print('Loading the MSCOCO dataset...')
-    print('Training model on:', dataset.name)
-    print('The dataset size:', len(dataset))
-    print("----------------------------------------------------------")
+    model = yolo_net
+    model.to(device).train()
 
-
+    # keep training
+    if args.resume is not None:
+        print('keep training model: %s' % (args.resume))
+        model.load_state_dict(torch.load(args.resume, map_location=device))
+ 
     # use tfboard
     if args.tfboard:
         print('use tensorboard')
@@ -151,29 +176,6 @@ def train():
         os.makedirs(log_path, exist_ok=True)
 
         writer = SummaryWriter(log_path)
-    
-    model = yolo_net
-
-    # keep training
-    if args.resume is not None:
-        print('keep training model: %s' % (args.resume))
-        model.load_state_dict(torch.load(args.resume, map_location=device))
-
-    model.to(device).train()
-
-    dataloader = torch.utils.data.DataLoader(
-                    dataset, 
-                    batch_size=args.batch_size, 
-                    shuffle=True, 
-                    collate_fn=detection_collate,
-                    num_workers=args.num_workers)
-
-    evaluator = COCOAPIEvaluator(
-                    data_dir=data_dir,
-                    img_size=cfg['min_dim'],
-                    device=device,
-                    transform=BaseTransform(cfg['min_dim'], mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229))
-                    )
 
     # optimizer setup
     base_lr = args.lr
@@ -184,9 +186,8 @@ def train():
     max_epoch = cfg['max_epoch']
     epoch_size = len(dataset) // args.batch_size
 
-    # start training loop
     t0 = time.time()
-
+    # start training loop
     for epoch in range(args.start_epoch, max_epoch):
 
         # use cos lr
