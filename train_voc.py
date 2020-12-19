@@ -35,6 +35,8 @@ def parse_args():
                         help='yes or no to choose using warmup strategy to train')
     parser.add_argument('--wp_epoch', type=int, default=2,
                         help='The upper bound of warm-up')
+    parser.add_argument('--mosaic', action='store_true', default=False,
+                        help='use mosaic augmentation.')
     parser.add_argument('--dataset_root', default=VOC_ROOT, 
                         help='Location of VOC root directory')
     parser.add_argument('--num_classes', default=20, type=int, 
@@ -87,15 +89,22 @@ def train():
     else:
         device = torch.device("cpu")
 
+    if args.mosaic:
+        print("use Mosaic Augmentation ...")
+        
     # use multi-scale trick
     if args.multi_scale:
         print('use multi-scale trick.')
         input_size = [640, 640]
-        dataset = VOCDetection(root=args.dataset_root, transform=SSDAugmentation(input_size, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229)))
+        dataset = VOCDetection(root=args.dataset_root, 
+                               transform=SSDAugmentation(input_size, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229)),
+                               mosaic=args.mosaic)
 
     else:
         input_size = cfg['min_dim']
-        dataset = VOCDetection(root=args.dataset_root, transform=SSDAugmentation(cfg['min_dim'], mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229)))
+        dataset = VOCDetection(root=args.dataset_root, 
+                               transform=SSDAugmentation(input_size, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229)),
+                               mosaic=args.mosaic)
 
     # build model
     if args.version == 'yolo_v3_spp':

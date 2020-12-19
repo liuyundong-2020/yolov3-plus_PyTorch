@@ -3,7 +3,6 @@ from __future__ import division
 from utils.cocoapi_evaluator import COCOAPIEvaluator
 from data import *
 from utils.augmentations import SSDAugmentation
-from data.cocodataset import *
 import tools
 
 import os
@@ -46,8 +45,6 @@ def parse_args():
                         help='start epoch to train')
     parser.add_argument('-r', '--resume', default=None, type=str, 
                         help='keep training')
-    parser.add_argument('--dataset_root', default='/home/k545/object-detection/dataset/COCO/', 
-                        help='Location of COCO root directory')
     parser.add_argument('--num_classes', default=80, type=int, 
                         help='The number of dataset classes')
     parser.add_argument('--momentum', default=0.9, type=float, 
@@ -74,7 +71,7 @@ def parse_args():
 
 def train():
     args = parse_args()
-    data_dir = args.dataset_root
+    data_dir = coco_root
 
     path_to_save = os.path.join(args.save_folder, args.version)
     os.makedirs(path_to_save, exist_ok=True)

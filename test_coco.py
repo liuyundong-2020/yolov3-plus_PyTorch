@@ -22,8 +22,6 @@ parser.add_argument('--trained_model', default='weights/yolo_v2_72.2.pth',
                     type=str, help='Trained state_dict file path to open')
 parser.add_argument('--visual_threshold', default=0.3, type=float,
                     help='Final confidence threshold')
-parser.add_argument('--dataset_root', default='/home/k545/object-detection/dataset/COCO/', 
-                    help='Location of COCO root directory')
 parser.add_argument('--cuda', action='store_true', default=False, 
                     help='use cuda.')
 parser.add_argument('-f', default=None, type=str, 
@@ -57,9 +55,6 @@ coco_class_index = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 1
 def test_net(net, device, testset, thresh, mode='voc'):
     class_color = [(np.random.randint(255),np.random.randint(255),np.random.randint(255)) for _ in range(80)]
     num_images = len(testset)
-
-    path_save = os.path.join('test_images/', args.dataset, args.version) 
-    os.makedirs(path_save, exist_ok=True)
 
     for index in range(num_images):
         print('Testing image {:d}/{:d}....'.format(index+1, num_images))
@@ -95,10 +90,6 @@ def test_net(net, device, testset, thresh, mode='voc'):
                 cv2.putText(img, mess, (int(xmin), int(ymin-5)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1)
         cv2.imshow('detection', img)
         cv2.waitKey(0)
-        # if index % 500 == 0:
-        #     print('Saving ' + str(index) + '-th image ...')
-        # cv2.imwrite(os.path.join(path_save, str(index).zfill(6) +'.jpg'), img)
-
 
 
 def test():
@@ -116,7 +107,7 @@ def test():
 
     if args.dataset == 'COCO':
         testset = COCODataset(
-                    data_dir=args.dataset_root,
+                    data_dir=coco_root,
                     json_file='instances_val2017.json',
                     name='val2017',
                     img_size=input_size[0],

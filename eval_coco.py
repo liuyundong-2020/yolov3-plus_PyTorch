@@ -40,27 +40,26 @@ parser.add_argument('--debug', action='store_true', default=False,
 
 
 args = parser.parse_args()
-data_dir = args.dataset_root
 
 def test(model, input_size, device):
     if args.testset:
         print('test on test-dev 2017')
         evaluator = COCOAPIEvaluator(
-                        data_dir=data_dir,
+                        data_dir=coco_root,
                         img_size=input_size,
                         device=device,
                         testset=True,
-                        transform=BaseTransform(input_size, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229))
+                        transform=BaseTransform(input_size)
                         )
 
     else:
         # eval
         evaluator = COCOAPIEvaluator(
-                        data_dir=data_dir,
+                        data_dir=coco_root,
                         img_size=input_size,
                         device=device,
                         testset=False,
-                        transform=BaseTransform(input_size, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229))
+                        transform=BaseTransform(input_size)
                         )
 
     # COCO evaluation

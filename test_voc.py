@@ -65,9 +65,6 @@ def test_net(net, device, testset, input_size, thresh, mode='voc'):
                 cv2.putText(img_raw, mess, (int(xmin), int(ymin-5)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1)
         cv2.imshow('detection', img_raw)
         cv2.waitKey(0)
-        # print('Saving the' + str(index) + '-th image ...')
-        # cv2.imwrite('test_images/' + args.dataset+ '3/' + str(index).zfill(6) +'.jpg', img)
-
 
 
 def test():
