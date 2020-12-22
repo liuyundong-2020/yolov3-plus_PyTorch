@@ -14,7 +14,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Object Detection')
 
     parser.add_argument('-v', '--version', default='yolo_v3_plus',
-                        help='yolo_v3_plus, yolo_v3_slim')
+                        help='yolo_v3_plus, yolo_v3_spp, yolo_v3_slim')
     parser.add_argument('-d', '--dataset', default='COCO',
                         help='COCO dataset')
     parser.add_argument('--mode', default='image',
@@ -253,7 +253,13 @@ def run():
         from models.yolo_v3_plus import YOLOv3Plus
         anchor_size = MULTI_ANCHOR_SIZE_COCO
         net = YOLOv3Plus(device, num_classes=80, input_size=input_size, anchor_size=anchor_size)
-    
+
+    elif args.version == 'yolo_v3_spp':
+        print('loading YOLOv3Spp ...')
+        from models.yolo_v3_spp import YOLOv3SPP
+        anchor_size = MULTI_ANCHOR_SIZE_COCO
+        net = YOLOv3SPP(device, num_classes=80, input_size=input_size, anchor_size=anchor_size)
+
     elif args.version == 'yolo_v3_slim':
         print('loading YOLOv3Slim ...')
         from models.yolo_v3_slim import YOLOv3Slim
@@ -261,7 +267,7 @@ def run():
         net = YOLOv3Slim(device, num_classes=80, input_size=input_size, anchor_size=anchor_size)
     
     else:
-        print("We only support yolo_v3_plus and yolo_v3_slim !! Please verify whether the --version or -v you entered meets the requirements ")
+        print("We only support yolo_v3_plus, yolo_v3_spp and yolo_v3_slim !! Please verify whether the --version or -v you entered meets the requirements ")
         exit(0)
 
     # load a trained model
