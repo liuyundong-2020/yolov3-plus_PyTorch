@@ -13,7 +13,7 @@ from decimal import *
 
 parser = argparse.ArgumentParser(description='YOLO-v2 Detection')
 parser.add_argument('-v', '--version', default='yolo_v3_spp',
-                    help='yolo_v3_spp, yolo_v3_slim')
+                    help='yolo_v3_spp, yolo_v3_plus, yolo_v3_slim, yolo_v3_tiny')
 parser.add_argument('-d', '--dataset', default='COCO',
                     help='we use VOC-test or COCO-val to test.')
 parser.add_argument('-size', '--input_size', default=416, type=int, 
@@ -129,6 +129,12 @@ def test():
         from models.yolo_v3_slim import YOLOv3Slim
     
         net = YOLOv3Slim(device, input_size=input_size, num_classes=num_classes, anchor_size=config.MULTI_ANCHOR_SIZE_COCO)
+
+    elif args.version == 'yolo_v3_tiny':
+        from models.yolo_v3_tiny import YOLOv3Tiny
+    
+        net = YOLOv3Tiny(device, input_size=input_size, num_classes=num_classes, anchor_size=config.MULTI_ANCHOR_SIZE_COCO)
+
 
     net.load_state_dict(torch.load(args.trained_model, map_location='cuda'))
     net.to(device).eval()

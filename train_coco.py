@@ -20,7 +20,7 @@ import torch.backends.cudnn as cudnn
 def parse_args():
     parser = argparse.ArgumentParser(description='YOLO Detection')
     parser.add_argument('-v', '--version', default='yolo_v3_spp',
-                        help='yolo_v3_plus, yolo_v3_spp, yolo_v3_slim')
+                        help='yolo_v3_plus, yolo_v3_spp, yolo_v3_slim, yolo_v3_tiny')
     parser.add_argument('-d', '--dataset', default='VOC',
                         help='VOC or COCO dataset')
     parser.add_argument('-hr', '--high_resolution', action='store_true', default=False,
@@ -98,7 +98,7 @@ def train():
         print('Let us use the multi-scale trick.')
         input_size = [640, 640]
     else:
-        input_size = [416, 416]
+        input_size = [64, 64]
 
     print("Setting Arguments.. : ", args)
     print("----------------------------------------------------------")
@@ -151,6 +151,13 @@ def train():
     
         yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr)
         print('Let us train yolo_v3_slim on the COCO dataset ......')
+
+    elif args.version == 'yolo_v3_tiny':
+        from models.yolo_v3_tiny import YOLOv3Tiny
+        anchor_size = MULTI_ANCHOR_SIZE_COCO
+    
+        yolo_net = YOLOv3Tiny(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr)
+        print('Let us train yolo_v3_tiny on the COCO dataset ......')
 
     else:
         print('Unknown version !!!')

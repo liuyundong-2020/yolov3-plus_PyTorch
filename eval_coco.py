@@ -20,7 +20,7 @@ import torch.optim as optim
 
 parser = argparse.ArgumentParser(description='YOLO Detection')
 parser.add_argument('-v', '--version', default='yolo_v3_spp',
-                    help='yolo_v3_spp, yolo_v3_slim')
+                    help='yolo_v3_spp, yolo_v3_plus, yolo_v3_slim, yolo_v3_tiny')
 parser.add_argument('-t', '--testset', action='store_true', default=False,
                     help='COCO_val, COCO_test-dev dataset')
 parser.add_argument('-size', '--input_size', default=416, type=int, 
@@ -90,6 +90,11 @@ if __name__ == '__main__':
         from models.yolo_v3_slim import YOLOv3Slim
     
         model = YOLOv3Slim(device, input_size=input_size, num_classes=args.num_classes, anchor_size=MULTI_ANCHOR_SIZE_COCO)
+
+    elif args.version == 'yolo_v3_tiny':
+        from models.yolo_v3_tiny import YOLOv3Tiny
+    
+        model = YOLOv3Tiny(device, input_size=input_size, num_classes=args.num_classes, anchor_size=MULTI_ANCHOR_SIZE_COCO)
     
     else:
         print('Unknown Version !!!')
