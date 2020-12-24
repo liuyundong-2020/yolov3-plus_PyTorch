@@ -98,7 +98,7 @@ def train():
         print('Let us use the multi-scale trick.')
         input_size = [640, 640]
     else:
-        input_size = [64, 64]
+        input_size = [416, 416]
 
     print("Setting Arguments.. : ", args)
     print("----------------------------------------------------------")

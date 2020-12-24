@@ -93,18 +93,17 @@ def train():
         print("use Mosaic Augmentation ...")
         
     # use multi-scale trick
+    # multi scale
     if args.multi_scale:
-        print('use multi-scale trick.')
+        print('Let us use the multi-scale trick.')
         input_size = [640, 640]
-        dataset = VOCDetection(root=args.dataset_root, 
-                               transform=SSDAugmentation(input_size, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229)),
-                               mosaic=args.mosaic)
-
     else:
-        input_size = cfg['min_dim']
-        dataset = VOCDetection(root=args.dataset_root, 
-                               transform=SSDAugmentation(input_size, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229)),
-                               mosaic=args.mosaic)
+        input_size = [416, 416]
+
+    # dataset
+    dataset = VOCDetection(root=args.dataset_root, 
+                            transform=SSDAugmentation(input_size, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229)),
+                            mosaic=args.mosaic)
 
     # build model
     if args.version == 'yolo_v3_spp':
