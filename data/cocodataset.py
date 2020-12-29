@@ -5,7 +5,11 @@ import random
 import torch
 from torch.utils.data import Dataset
 import cv2
-from pycocotools.coco import COCO
+try:
+    from pycocotools.coco import COCO
+except:
+    print('It seems that you do not install cocoapi ...')
+    pass
 
 
 coco_class_labels = ('background',
@@ -29,8 +33,6 @@ coco_class_index = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 1
                     70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90]
 
 coco_root = '/home/k545/object-detection/dataset/COCO/'
-
-
 class COCODataset(Dataset):
     """
     COCO dataset class.
