@@ -8,7 +8,7 @@ import tools
 
 
 class YOLOv3SPP(nn.Module):
-    def __init__(self, device, input_size=None, num_classes=20, trainable=False, conf_thresh=0.001, nms_thresh=0.50, anchor_size=None, hr=False):
+    def __init__(self, device, input_size=None, num_classes=20, trainable=False, conf_thresh=0.001, nms_thresh=0.50, anchor_size=None, hr=False, backbone='d-53'):
         super(YOLOv3SPP, self).__init__()
         self.device = device
         self.input_size = input_size
@@ -16,6 +16,7 @@ class YOLOv3SPP(nn.Module):
         self.trainable = trainable
         self.conf_thresh = conf_thresh
         self.nms_thresh = nms_thresh
+        self.bk = backbone
         self.stride = [8, 16, 32]
         self.anchor_size = torch.tensor(anchor_size).view(3, len(anchor_size) // 3, 2)
         self.anchor_number = self.anchor_size.size(1)
@@ -24,8 +25,13 @@ class YOLOv3SPP(nn.Module):
         self.scale = np.array([[[input_size[1], input_size[0], input_size[1], input_size[0]]]])
         self.scale_torch = torch.tensor(self.scale.copy(), device=device).float()
 
-        # backbone darknet-53 (optional: darknet-19)
-        self.backbone = darknet53(pretrained=trainable, hr=hr)
+        if self.bk == 'd-53':
+            # use darknet-53 as backbone
+            print('Use backbone: d-53')
+            self.backbone = darknet53(pretrained=trainable, hr=hr)
+        else:
+            print("For YOLOv3SPP, we only support <d-53> as our backbone !!")
+            exit(0)
 
         # SPP
         self.spp = SPP()

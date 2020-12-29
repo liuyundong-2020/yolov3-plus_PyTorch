@@ -8,7 +8,7 @@ import tools
 
 
 class YOLOv3Slim(nn.Module):
-    def __init__(self, device, input_size=None, num_classes=20, trainable=False, conf_thresh=0.001, nms_thresh=0.50, anchor_size=None, hr=False):
+    def __init__(self, device, input_size=None, num_classes=20, trainable=False, conf_thresh=0.001, nms_thresh=0.50, anchor_size=None, hr=False, backbone='d-tiny'):
         super(YOLOv3Slim, self).__init__()
         self.device = device
         self.input_size = input_size
@@ -16,6 +16,7 @@ class YOLOv3Slim(nn.Module):
         self.trainable = trainable
         self.conf_thresh = conf_thresh
         self.nms_thresh = nms_thresh
+        self.bk = backbone
         self.stride = [8, 16, 32]
         self.anchor_size = torch.tensor(anchor_size).view(3, len(anchor_size) // 3, 2)
         self.anchor_number = self.anchor_size.size(1)
@@ -24,8 +25,17 @@ class YOLOv3Slim(nn.Module):
         self.scale = np.array([[[input_size[1], input_size[0], input_size[1], input_size[0]]]])
         self.scale_torch = torch.tensor(self.scale.copy(), device=device).float()
 
-        # backbone darknet-53 (optional: darknet-19)
-        self.backbone = darknet_tiny(pretrained=trainable, hr=hr)
+        if self.bk == 'd-tiny':
+            # use darknet-tiny as backbone
+            print('Use backbone: d-tiny')
+            self.backbone = darknet_tiny(pretrained=trainable, hr=hr)
+        elif self.bk == 'csp-slim':
+            # use cspdarknet_slim as backbone
+            print('Use backbone: csp-slim')
+            self.backbone = cspdarknet_slim(pretrained=trainable, hr=hr)
+        else:
+            print("For YOLOv3Slim, we only support <d-tiny, csp-slim> as our backbone !!")
+            exit(0)
 
         # SPP
         self.spp = nn.Sequential(

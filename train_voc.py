@@ -18,7 +18,10 @@ import argparse
 def parse_args():
     parser = argparse.ArgumentParser(description='YOLO Detection')
     parser.add_argument('-v', '--version', default='yolo_v3_spp',
-                        help='yolo_v3_spp, yolo_v3_plus, yolo_v3_slim, yolo_v3_tiny')
+                        help='yolo_v3_plus, yolo_v3_plus_large, yolo_v3_plus_medium, yolo_v3_plus_small, \
+                              yolo_v3_slim, yolo_v3_slim_csp, \
+                              yolo_v3_tiny, yolo_v3_tiny_csp, \
+                              yolo_v3_spp.')
     parser.add_argument('-d', '--dataset', default='VOC',
                         help='VOC or COCO dataset')
     parser.add_argument('-hr', '--high_resolution', action='store_true', default=False,
@@ -106,32 +109,81 @@ def train():
                             mosaic=args.mosaic)
 
     # build model
-    if args.version == 'yolo_v3_spp':
-        from models.yolo_v3_spp import YOLOv3SPP
-        anchor_size = MULTI_ANCHOR_SIZE
-        
-        yolo_net = YOLOv3SPP(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr)
-        print('Let us train yolo-v3-spp on the VOC0712 dataset ......')
-    elif args.version == 'yolo_v3_plus':
+    # # yolo_v3_plus series: yolo_v3_plus, yolo_v3_plus_large, yolo_v3_plus_medium, yolo_v3_plus_small
+    if args.version == 'yolo_v3_plus':
         from models.yolo_v3_plus import YOLOv3Plus
         anchor_size = MULTI_ANCHOR_SIZE
+        backbone = 'd-53'
         
-        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr)
-        print('Let us train yolo-v3-plus on the VOC0712 dataset ......')
-
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        print('Let us train yolo_v3_plus on the VOC dataset ......')
+    
+    elif args.version == 'yolo_v3_plus_large':
+        from models.yolo_v3_plus import YOLOv3Plus
+        anchor_size = MULTI_ANCHOR_SIZE
+        backbone = 'csp-l'
+        
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        print('Let us train yolo_v3_plus_large on the VOC dataset ......')
+    
+    elif args.version == 'yolo_v3_plus_medium':
+        from models.yolo_v3_plus import YOLOv3Plus
+        anchor_size = MULTI_ANCHOR_SIZE
+        backbone = 'csp-m'
+        
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        print('Let us train yolo_v3_plus_medium on the VOC dataset ......')
+    
+    elif args.version == 'yolo_v3_plus_small':
+        from models.yolo_v3_plus import YOLOv3Plus
+        anchor_size = MULTI_ANCHOR_SIZE
+        backbone = 'csp-s'
+        
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        print('Let us train yolo_v3_plus_small on the VOC dataset ......')
+    
+    # # yolo_v3_slim series: 
     elif args.version == 'yolo_v3_slim':
         from models.yolo_v3_slim import YOLOv3Slim
         anchor_size = MULTI_ANCHOR_SIZE
-    
-        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr)
-        print('Let us train yolo_v3_slim on the VOC0712 dataset ......')
+        backbone = 'd-tiny'
+        
+        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        print('Let us train yolo_v3_slim on the VOC dataset ......')
 
+    elif args.version == 'yolo_v3_slim_csp':
+        from models.yolo_v3_slim import YOLOv3Slim
+        anchor_size = MULTI_ANCHOR_SIZE
+        backbone = 'csp-slim'
+        
+        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        print('Let us train yolo_v3_slim_csp on the VOC dataset ......')
+
+    # # yolo_v3_tiny series: 
     elif args.version == 'yolo_v3_tiny':
         from models.yolo_v3_tiny import YOLOv3Tiny
         anchor_size = MULTI_ANCHOR_SIZE
-    
-        yolo_net = YOLOv3Tiny(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr)
-        print('Let us train yolo_v3_tiny on the VOC0712 dataset ......')
+        backbone = 'd-tiny'
+        
+        yolo_net = YOLOv3Tiny(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        print('Let us train yolo_v3_tiny on the VOC dataset ......')
+
+    elif args.version == 'yolo_v3_tiny_csp':
+        from models.yolo_v3_tiny import YOLOv3Tiny
+        anchor_size = MULTI_ANCHOR_SIZE
+        backbone = 'csp-tiny'
+        
+        yolo_net = YOLOv3Tiny(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        print('Let us train yolo_v3_tiny_csp on the VOC dataset ......')
+        
+    # # yolo_v3_spp
+    elif args.version == 'yolo_v3_spp':
+        from models.yolo_v3_spp import YOLOv3SPP
+        anchor_size = MULTI_ANCHOR_SIZE
+        backbone = 'd-53'
+        
+        yolo_net = YOLOv3SPP(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        print('Let us train yolo-v3-spp on the VOC dataset ......')
 
     else:
         print('Unknown version !!!')
