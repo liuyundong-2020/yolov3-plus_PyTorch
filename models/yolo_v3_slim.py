@@ -284,7 +284,7 @@ class YOLOv3Slim(nn.Module):
                 # use CIoU loss to regress bbox
                 x1y1x2y2_pred_ = (self.decode_boxes(txtytwth_pred) / self.scale_torch).view(-1, 4)
                 with torch.no_grad():
-                    x1y1x2y2_pred = x1y1x2y2_pred_
+                    x1y1x2y2_pred = x1y1x2y2_pred_.clone()
                 
                 x1y1x2y2_gt = target[:, :, 7:].view(-1, 4)
 

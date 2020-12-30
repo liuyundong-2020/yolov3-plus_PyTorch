@@ -48,20 +48,20 @@ class YOLOv3Tiny(nn.Module):
         # head
         self.head_conv_0 = Conv(512, 256, k=1)  # 10
         self.head_upsample_0 = UpSample(scale_factor=2)
-        self.head_csp_0 = Conv(256 + 256, 256, k=1)
+        self.head_csp_0 = BottleneckCSP(256 + 256, 256, n=1,shortcut=False)
 
         # P3/8-small
         self.head_conv_1 = Conv(256, 128, k=1)  # 14
         self.head_upsample_1 = UpSample(scale_factor=2)
-        self.head_csp_1 = Conv(128 + 128, 128, k=1)
+        self.head_csp_1 = BottleneckCSP(128 + 128, 128, n=1, shortcut=False)
 
         # P4/16-medium
-        self.head_downsample_2 = nn.MaxPool2d((3, 3), stride=2, padding=1)
-        self.head_csp_2 = Conv(128 + 128, 256, k=1)
+        self.head_conv_2 = nn.MaxPool2d((2, 2), 2)
+        self.head_csp_2 = BottleneckCSP(128 + 128, 256, n=1, shortcut=False)
 
         # P8/32-large
-        self.head_downsample_3 = nn.MaxPool2d((3, 3), stride=2, padding=1)
-        self.head_csp_3 = Conv(256 + 256, 512, k=1)
+        self.head_conv_3 = nn.MaxPool2d((2, 2), 2)
+        self.head_csp_3 = BottleneckCSP(256 + 256, 512, n=1, shortcut=False)
 
         # det conv
         self.head_det_1 = nn.Conv2d(128, self.anchor_number * (1 + self.num_classes + 4), 1)
@@ -284,7 +284,7 @@ class YOLOv3Tiny(nn.Module):
                 # use CIoU loss to regress bbox
                 x1y1x2y2_pred_ = (self.decode_boxes(txtytwth_pred) / self.scale_torch).view(-1, 4)
                 with torch.no_grad():
-                    x1y1x2y2_pred = x1y1x2y2_pred_
+                    x1y1x2y2_pred = x1y1x2y2_pred_.clone()
                 
                 x1y1x2y2_gt = target[:, :, 7:].view(-1, 4)
 

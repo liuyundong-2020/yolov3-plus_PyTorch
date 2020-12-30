@@ -343,7 +343,6 @@ def loss_ciou(pred_conf, pred_cls, pred_ciou, label, num_classes, obj_loss_f='ms
         noobj = 1.0
 
     cls_loss_function = nn.CrossEntropyLoss(reduction='none')
-    ciou_loss_function = nn.BCELoss(reduction='none')
 
     pred_conf = torch.sigmoid(pred_conf[:, :, 0])
     pred_cls = pred_cls.permute(0, 2, 1)
@@ -351,7 +350,6 @@ def loss_ciou(pred_conf, pred_cls, pred_ciou, label, num_classes, obj_loss_f='ms
     gt_conf = label[:, :, 0].float()
     gt_obj = label[:, :, 1].float()
     gt_cls = label[:, :, 2].long()
-    gt_ciou = gt_obj.clone()
     gt_box_scale_weight = label[:, :, -1]
     gt_mask = (gt_box_scale_weight > 0.).float()
 
@@ -363,7 +361,8 @@ def loss_ciou(pred_conf, pred_cls, pred_ciou, label, num_classes, obj_loss_f='ms
     cls_loss = torch.mean(torch.sum(cls_loss_function(pred_cls, gt_cls) * gt_mask, 1))
     
     # ciou loss
-    ciou_loss = torch.mean(torch.sum(ciou_loss_function(pred_ciou, gt_ciou) * gt_box_scale_weight * gt_mask, 1))
+    # ciou_loss = torch.mean(torch.sum(ciou_loss_function(pred_ciou, gt_ciou) * gt_box_scale_weight * gt_mask, 1))
+    ciou_loss = torch.mean(torch.sum((1.0 - pred_ciou) * gt_box_scale_weight * gt_mask, 1))
 
 
     total_loss = conf_loss + cls_loss + ciou_loss
@@ -460,7 +459,7 @@ if __name__ == "__main__":
     print(iou)
 
     box1 = torch.FloatTensor([[0,0,8,6], [0, 0, 10, 10]]) / 100.
-    box2 = torch.FloatTensor([[2,3,10,9], [0, 0, 10, 10]]) / 100.
+    box2 = torch.FloatTensor([[2,3,10,9], [100, 100, 10, 10]]) / 100.
     iou = IoU(box1, box2, batch_size=2)
     print('iou: ', iou)
     diou = DIoU(box1, box2, batch_size=2)
