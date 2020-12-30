@@ -36,6 +36,8 @@ def parse_args():
                         help='Batch size for training')
     parser.add_argument('--lr', default=1e-3, type=float, 
                         help='initial learning rate')
+    parser.add_argument('-ciou', '--ciou_loss', action='store_true', default=False,
+                        help='use ciou to regress bbox.')
     parser.add_argument('-cos', '--cos', action='store_true', default=False,
                         help='use cos lr')
     parser.add_argument('-no_wp', '--no_warm_up', action='store_true', default=False,
@@ -140,7 +142,7 @@ def train():
         anchor_size = MULTI_ANCHOR_SIZE_COCO
         backbone = 'd-53'
         
-        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
         print('Let us train yolo_v3_plus on the COCO dataset ......')
     
     elif args.version == 'yolo_v3_plus_large':
@@ -148,7 +150,7 @@ def train():
         anchor_size = MULTI_ANCHOR_SIZE_COCO
         backbone = 'csp-l'
         
-        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
         print('Let us train yolo_v3_plus_large on the COCO dataset ......')
     
     elif args.version == 'yolo_v3_plus_medium':
@@ -156,7 +158,7 @@ def train():
         anchor_size = MULTI_ANCHOR_SIZE_COCO
         backbone = 'csp-m'
         
-        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
         print('Let us train yolo_v3_plus_medium on the COCO dataset ......')
     
     elif args.version == 'yolo_v3_plus_small':
@@ -164,7 +166,7 @@ def train():
         anchor_size = MULTI_ANCHOR_SIZE_COCO
         backbone = 'csp-s'
         
-        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
         print('Let us train yolo_v3_plus_small on the COCO dataset ......')
     
     # # yolo_v3_slim series: 
@@ -173,7 +175,7 @@ def train():
         anchor_size = MULTI_ANCHOR_SIZE_COCO
         backbone = 'd-tiny'
         
-        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
         print('Let us train yolo_v3_slim on the COCO dataset ......')
 
     elif args.version == 'yolo_v3_slim_csp':
@@ -181,7 +183,7 @@ def train():
         anchor_size = MULTI_ANCHOR_SIZE_COCO
         backbone = 'csp-slim'
         
-        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
         print('Let us train yolo_v3_slim_csp on the COCO dataset ......')
 
     # # yolo_v3_tiny series: 
@@ -190,7 +192,7 @@ def train():
         anchor_size = MULTI_ANCHOR_SIZE_COCO
         backbone = 'd-tiny'
         
-        yolo_net = YOLOv3Tiny(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        yolo_net = YOLOv3Tiny(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
         print('Let us train yolo_v3_tiny on the COCO dataset ......')
 
     elif args.version == 'yolo_v3_tiny_csp':
@@ -198,7 +200,7 @@ def train():
         anchor_size = MULTI_ANCHOR_SIZE_COCO
         backbone = 'csp-tiny'
         
-        yolo_net = YOLOv3Tiny(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        yolo_net = YOLOv3Tiny(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
         print('Let us train yolo_v3_tiny_csp on the COCO dataset ......')
         
     # # yolo_v3_spp
@@ -207,7 +209,7 @@ def train():
         anchor_size = MULTI_ANCHOR_SIZE_COCO
         backbone = 'd-53'
         
-        yolo_net = YOLOv3SPP(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        yolo_net = YOLOv3SPP(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
         print('Let us train yolo-v3-spp on the COCO dataset ......')
 
     else:
@@ -265,8 +267,8 @@ def train():
             # WarmUp strategy for learning rate
             if not args.no_warm_up:
                 if epoch < args.wp_epoch:
-                    tmp_lr = base_lr * pow((iter_i+epoch*epoch_size)*1. / (args.wp_epoch*epoch_size), 4)
-                    # tmp_lr = 1e-6 + (base_lr-1e-6) * (iter_i+epoch*epoch_size) / (epoch_size * (args.wp_epoch))
+                    # tmp_lr = base_lr * pow((iter_i+epoch*epoch_size)*1. / (args.wp_epoch*epoch_size), 4)
+                    tmp_lr = 1e-6 + (base_lr-1e-6) * (iter_i+epoch*epoch_size) / (epoch_size * (args.wp_epoch))
                     set_lr(optimizer, tmp_lr)
 
                 elif epoch == args.wp_epoch and iter_i == 0:
@@ -292,7 +294,7 @@ def train():
             targets = torch.tensor(targets).float().to(device)
 
             # forward and loss
-            conf_loss, cls_loss, txtytwth_loss, total_loss = model(images, target=targets)
+            conf_loss, cls_loss, bbox_loss, total_loss = model(images, target=targets)
 
             # backprop
             total_loss.backward()        
@@ -304,13 +306,13 @@ def train():
                     # viz loss
                     writer.add_scalar('object loss', conf_loss.item(), iter_i + epoch * epoch_size)
                     writer.add_scalar('class loss', cls_loss.item(), iter_i + epoch * epoch_size)
-                    writer.add_scalar('local loss', txtytwth_loss.item(), iter_i + epoch * epoch_size)
+                    writer.add_scalar('local loss', bbox_loss.item(), iter_i + epoch * epoch_size)
                 
                 t1 = time.time()
                 print('[Epoch %d/%d][Iter %d/%d][lr %.6f]'
                     '[Loss: obj %.2f || cls %.2f || bbox %.2f || total %.2f || size %d || time: %.2f]'
                         % (epoch+1, max_epoch, iter_i, epoch_size, tmp_lr,
-                            conf_loss.item(), cls_loss.item(), txtytwth_loss.item(), total_loss.item(), input_size[0], t1-t0),
+                            conf_loss.item(), cls_loss.item(), bbox_loss.item(), total_loss.item(), input_size[0], t1-t0),
                         flush=True)
 
                 t0 = time.time()

@@ -2,6 +2,7 @@ import numpy as np
 from data import *
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 
 CLASS_COLOR = [(np.random.randint(255),np.random.randint(255),np.random.randint(255)) for _ in range(len(VOC_CLASSES))]
 # We use ignore thresh to decide which anchor box can be kept.
@@ -280,7 +281,7 @@ def iou_score(bboxes_a, bboxes_b):
 
     en = (tl < br).type(tl.type()).prod(dim=1)
     area_i = torch.prod(br - tl, 1) * en  # * ((tl < br).all())
-    return area_i / (area_a + area_b - area_i)
+    return area_i / (area_a + area_b - area_i + 1e-20)
 
 
 def loss(pred_conf, pred_cls, pred_txtytwth, label, num_classes, obj_loss_f='mse'):
@@ -328,49 +329,124 @@ def loss(pred_conf, pred_cls, pred_txtytwth, label, num_classes, obj_loss_f='mse
 
     return conf_loss, cls_loss, txtytwth_loss, total_loss
 
+
+def loss_ciou(pred_conf, pred_cls, pred_ciou, label, num_classes, obj_loss_f='mse'):
+    if obj_loss_f == 'bce':
+        # In yolov3, we use bce as conf loss_f
+        conf_loss_function = BCELoss(reduction='mean')
+        obj = 1.0
+        noobj = 1.0
+    elif obj_loss_f == 'mse':
+        # In yolov2, we use mse as conf loss_f.
+        conf_loss_function = MSELoss(reduction='mean')
+        obj = 5.0
+        noobj = 1.0
+
+    cls_loss_function = nn.CrossEntropyLoss(reduction='none')
+    ciou_loss_function = nn.BCELoss(reduction='none')
+
+    pred_conf = torch.sigmoid(pred_conf[:, :, 0])
+    pred_cls = pred_cls.permute(0, 2, 1)
+        
+    gt_conf = label[:, :, 0].float()
+    gt_obj = label[:, :, 1].float()
+    gt_cls = label[:, :, 2].long()
+    gt_ciou = gt_obj.clone()
+    gt_box_scale_weight = label[:, :, -1]
+    gt_mask = (gt_box_scale_weight > 0.).float()
+
+    # objectness loss
+    pos_loss, neg_loss = conf_loss_function(pred_conf, gt_conf, gt_obj)
+    conf_loss = obj * pos_loss + noobj * neg_loss
+    
+    # class loss
+    cls_loss = torch.mean(torch.sum(cls_loss_function(pred_cls, gt_cls) * gt_mask, 1))
+    
+    # ciou loss
+    ciou_loss = torch.mean(torch.sum(ciou_loss_function(pred_ciou, gt_ciou) * gt_box_scale_weight * gt_mask, 1))
+
+
+    total_loss = conf_loss + cls_loss + ciou_loss
+
+    return conf_loss, cls_loss, ciou_loss, total_loss
+
+
 # IoU and its a series of variants
-def IoU(pred, label):
+def IoU(bboxes_a, bboxes_b, batch_size):
     """
-        Input: pred  -> [xmin, ymin, xmax, ymax], size=[B, H*W, 4]
-               label -> [xmin, ymin, xmax, ymax], size=[B, H*W, 4]
+        Input: pred  -> [xmin, ymin, xmax, ymax], size=[B*N, 4]
+               label -> [xmin, ymin, xmax, ymax], size=[B*N, 4]
 
-        Output: IoU  -> [iou_1, iou_2, ...],    size=[B, H*W]
+        Output: IoU  -> [iou_1, iou_2, ...],    size=[B, N]
     """
+    B = batch_size
+    iou = iou_score(bboxes_a=bboxes_a, bboxes_b=bboxes_b)
+    # size=[B*N] -> [B, N]
+    iou = iou.view(B, -1, 1)
+    return iou
 
-    return
 
-
-def GIoU(pred, label):
+def DIoU(bboxes_a, bboxes_b, batch_size):
     """
-        Input: pred  -> [xmin, ymin, xmax, ymax], size=[B, H*W, 4]
-               label -> [xmin, ymin, xmax, ymax], size=[B, H*W, 4]
+        Input: pred  -> [xmin, ymin, xmax, ymax], size=[B*N, 4]
+               label -> [xmin, ymin, xmax, ymax], size=[B*N, 4]
 
-        Output: GIoU -> [giou_1, giou_2, ...],    size=[B, H*W]
+        Output: DIoU -> [diou_1, diou_2, ...],    size=[B, N]
     """
+    B = batch_size
 
-    return
+    x1234 = torch.cat([ bboxes_a[:, [0, 2]], bboxes_b[:, [0, 2]] ], dim=1)
+    y1234 = torch.cat([ bboxes_a[:, [1, 3]], bboxes_b[:, [1, 3]] ], dim=1)
+
+    # compute the length of diagonal line
+    C = torch.sqrt((torch.max(x1234, dim=1)[0] - torch.min(x1234, dim=1)[0])**2 + \
+                (torch.max(y1234, dim=1)[0] - torch.min(y1234, dim=1)[0])**2)
+
+    # compute the distance between two center point
+    # # points-1
+    points_1_x = (bboxes_a[:, 0] + bboxes_a[:, 2]) / 2.
+    points_1_y = (bboxes_a[:, 1] + bboxes_a[:, 3]) / 2.
+    # # points-2
+    points_2_x = (bboxes_b[:, 0] + bboxes_b[:, 2]) / 2.
+    points_2_y = (bboxes_b[:, 1] + bboxes_b[:, 3]) / 2.
+    D = torch.sqrt((points_2_x - points_1_x)**2 + (points_2_y - points_1_y)**2)
+
+    # compute iou
+    iou = IoU(bboxes_a, bboxes_b, B).view(-1)
+
+    lens = D**2 / (C**2 + 1e-20)
+    diou = iou - lens
+    # size=[B*N] -> [B, N]
+    diou = diou.view(B, -1, 1)
+
+    return diou
 
 
-def DIoU(pred, label):
+def CIoU(bboxes_a, bboxes_b, batch_size):
     """
-        Input: pred  -> [xmin, ymin, xmax, ymax], size=[B, H*W, 4]
-               label -> [xmin, ymin, xmax, ymax], size=[B, H*W, 4]
+        Input: pred  -> [xmin, ymin, xmax, ymax], size=[B*N, 4]
+               label -> [xmin, ymin, xmax, ymax], size=[B*N, 4]
 
-        Output: DIoU -> [diou_1, diou_2, ...],    size=[B, H*W]
+        Output: CIoU -> [ciou_1, ciou_2, ...],    size=[B, N]
     """
+    B = batch_size
+    iou = IoU(bboxes_a, bboxes_b, B).view(-1)
+    diou = DIoU(bboxes_a, bboxes_b, B).view(-1)
 
-    return
+    delta_x_1 = bboxes_a[:, 2] - bboxes_a[:, 0]
+    delta_x_2 = bboxes_b[:, 2] - bboxes_b[:, 0]
 
+    delta_y_1 = bboxes_a[:, 3] - bboxes_a[:, 1] + 1e-15
+    delta_y_2 = bboxes_b[:, 3] - bboxes_b[:, 1] + 1e-15
 
-def CIoU(pred, label):
-    """
-        Input: pred  -> [xmin, ymin, xmax, ymax], size=[B, H*W, 4]
-               label -> [xmin, ymin, xmax, ymax], size=[B, H*W, 4]
+    v = 4. / math.pi**2 * ((torch.atan((delta_x_1) / (delta_y_1)) - torch.atan((delta_x_2) / (delta_y_2)))**2 + 1e-15)
+    alpha = v / ((1-iou) + v)
 
-        Output: CIoU -> [ciou_1, ciou_2, ...],    size=[B, H*W]
-    """
+    ciou = diou - alpha * v
+    # size=[B*N] -> [B, N]
+    ciou = ciou.view(B, -1)
 
-    return
+    return ciou
 
 
 if __name__ == "__main__":
@@ -382,3 +458,12 @@ if __name__ == "__main__":
                              ])
     iou = compute_iou(anchor_boxes, gt_box)
     print(iou)
+
+    box1 = torch.FloatTensor([[0,0,8,6], [0, 0, 10, 10]]) / 100.
+    box2 = torch.FloatTensor([[2,3,10,9], [0, 0, 10, 10]]) / 100.
+    iou = IoU(box1, box2, batch_size=2)
+    print('iou: ', iou)
+    diou = DIoU(box1, box2, batch_size=2)
+    print('diou: ', diou)
+    ciou = CIoU(box1, box2, batch_size=2)
+    print('ciou: ', ciou)
