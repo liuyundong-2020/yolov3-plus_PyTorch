@@ -25,6 +25,24 @@ class Conv(nn.Module):
         return self.convs(x)
 
 
+class ResBlock(nn.Module):
+    def __init__(self, c1, n=1):
+        super(ResBlock, self).__init__()
+        self.module_list = nn.ModuleList()
+        c2 = c1 // 2
+        for _ in range(n):
+            resblock_one = nn.Sequential(
+                Conv(c1, c2, k=1),
+                Conv(c2, c1, k=3, p=1)
+            )
+            self.module_list.append(resblock_one)
+
+    def forward(self, x):
+        for module in self.module_list:
+            x = module(x) + x
+        return x
+
+
 # Copy from yolov5
 class Focus(nn.Module):
     """
@@ -63,7 +81,7 @@ class BottleneckCSP(nn.Module):
         self.cv3 = nn.Conv2d(c_, c_, kernel_size=1, bias=False)
         self.cv4 = Conv(2 * c_, c2, k=1)
         self.bn = nn.BatchNorm2d(2 * c_)  # applied to cat(cv2, cv3)
-        self.act = Hardswish()
+        self.act = nn.LeakyReLU(0.1, inplace=True)
         self.m = nn.Sequential(*[Bottleneck(c_, c_, shortcut, g, e=1.0) for _ in range(n)])
 
     def forward(self, x):
@@ -81,7 +99,7 @@ class CSPDarknet_large(nn.Module):
             
         self.layer_1 = nn.Sequential(
             Focus(c1=3, c2=64, k=3, p=1),           
-            BottleneckCSP(c1=64, c2=64, n=1)        # P1/2
+            ResBlock(c1=64, n=1)                    # P1/2
         )
         self.layer_2 = nn.Sequential(
             Conv(c1=64, c2=128, k=3, p=1, s=2),     
@@ -119,7 +137,7 @@ class CSPDarknet_medium(nn.Module):
             
         self.layer_1 = nn.Sequential(
             Focus(c1=3, c2=64, k=3, p=1),           
-            BottleneckCSP(c1=64, c2=64, n=1)        # P1/2
+            ResBlock(c1=64, n=1)                    # P1/2
         )
         self.layer_2 = nn.Sequential(
             Conv(c1=64, c2=128, k=3, p=1, s=2),     
@@ -157,7 +175,7 @@ class CSPDarknet_small(nn.Module):
             
         self.layer_1 = nn.Sequential(
             Focus(c1=3, c2=64, k=3, p=1),           
-            BottleneckCSP(c1=64, c2=64, n=1)        # P1/2
+            ResBlock(c1=64, n=1)                    # P1/2
         )
         self.layer_2 = nn.Sequential(
             Conv(c1=64, c2=128, k=3, p=1, s=2),     
@@ -195,7 +213,7 @@ class CSPDarknet_slim(nn.Module):
             
         self.layer_1 = nn.Sequential(
             Focus(c1=3, c2=32, k=3, p=1),           
-            BottleneckCSP(c1=32, c2=32, n=1)        # P1/2
+            ResBlock(c1=32, n=1)                    # P1/2
         )
         self.layer_2 = nn.Sequential(
             Conv(c1=32, c2=64, k=3, p=1, s=2),     
@@ -233,7 +251,7 @@ class CSPDarknet_tiny(nn.Module):
             
         self.layer_1 = nn.Sequential(
             Focus(c1=3, c2=32, k=3, p=1),           
-            BottleneckCSP(c1=32, c2=32, n=1)        # P1/2
+            ResBlock(c1=32, n=1)                    # P1/2
         )
         self.layer_2 = nn.Sequential(
             nn.MaxPool2d((2, 2), 2),     
