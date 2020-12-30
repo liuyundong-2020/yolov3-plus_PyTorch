@@ -20,7 +20,6 @@ def parse_args():
     parser.add_argument('-v', '--version', default='yolo_v3_spp',
                         help='yolo_v3_plus, yolo_v3_plus_large, yolo_v3_plus_medium, yolo_v3_plus_small, \
                               yolo_v3_slim, yolo_v3_slim_csp, \
-                              yolo_v3_tiny, yolo_v3_tiny_csp, \
                               yolo_v3_spp.')
     parser.add_argument('-d', '--dataset', default='VOC',
                         help='VOC or COCO dataset')
@@ -158,23 +157,6 @@ def train():
         
         yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
         print('Let us train yolo_v3_slim_csp on the VOC dataset ......')
-
-    # # yolo_v3_tiny series: 
-    elif args.version == 'yolo_v3_tiny':
-        from models.yolo_v3_tiny import YOLOv3Tiny
-        anchor_size = MULTI_ANCHOR_SIZE
-        backbone = 'd-tiny'
-        
-        yolo_net = YOLOv3Tiny(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
-        print('Let us train yolo_v3_tiny on the VOC dataset ......')
-
-    elif args.version == 'yolo_v3_tiny_csp':
-        from models.yolo_v3_tiny import YOLOv3Tiny
-        anchor_size = MULTI_ANCHOR_SIZE
-        backbone = 'csp-tiny'
-        
-        yolo_net = YOLOv3Tiny(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
-        print('Let us train yolo_v3_tiny_csp on the VOC dataset ......')
         
     # # yolo_v3_spp
     elif args.version == 'yolo_v3_spp':

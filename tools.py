@@ -361,7 +361,6 @@ def loss_ciou(pred_conf, pred_cls, pred_ciou, label, num_classes, obj_loss_f='ms
     cls_loss = torch.mean(torch.sum(cls_loss_function(pred_cls, gt_cls) * gt_mask, 1))
     
     # ciou loss
-    # ciou_loss = torch.mean(torch.sum(ciou_loss_function(pred_ciou, gt_ciou) * gt_box_scale_weight * gt_mask, 1))
     ciou_loss = torch.mean(torch.sum((1.0 - pred_ciou) * gt_box_scale_weight * gt_mask, 1))
 
 
