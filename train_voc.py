@@ -103,7 +103,7 @@ def train():
         input_size = [416, 416]
 
     # dataset
-    dataset = VOCDetection(root=args.dataset_root, 
+    dataset = VOCDetection(root=args.dataset_root, img_size=input_size[0],
                             transform=SSDAugmentation(input_size, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229)),
                             mosaic=args.mosaic)
 

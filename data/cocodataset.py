@@ -199,75 +199,102 @@ class COCODataset(Dataset):
                 # load image and preprocess
                 img_file = os.path.join(self.data_dir, self.name,
                                         '{:012}'.format(id_) + '.jpg')
-                img_ = cv2.imread(img_file)
+                img_i = cv2.imread(img_file)
                 
-                if self.json_file == 'instances_val5k.json' and img_ is None:
+                if self.json_file == 'instances_val5k.json' and img_i is None:
                     img_file = os.path.join(self.data_dir, 'train2017',
                                             '{:012}'.format(id_) + '.jpg')
-                    img_ = cv2.imread(img_file)
+                    img_i = cv2.imread(img_file)
 
-                assert img_ is not None
+                assert img_i is not None
 
-                height_, width_, channels_ = img_.shape             
+                height_i, width_i, channels_i = img_i.shape             
                 # COCOAnnotation Transform
                 # start here :
-                target_ = []
+                target_i = []
                 for anno in annotations:
                     x1 = np.max((0, anno['bbox'][0]))
                     y1 = np.max((0, anno['bbox'][1]))
-                    x2 = np.min((width_ - 1, x1 + np.max((0, anno['bbox'][2] - 1))))
-                    y2 = np.min((height_ - 1, y1 + np.max((0, anno['bbox'][3] - 1))))
+                    x2 = np.min((width_i - 1, x1 + np.max((0, anno['bbox'][2] - 1))))
+                    y2 = np.min((height_i - 1, y1 + np.max((0, anno['bbox'][3] - 1))))
                     if anno['area'] > 0 and x2 >= x1 and y2 >= y1:
                         label_ind = anno['category_id']
                         cls_id = self.class_ids.index(label_ind)
-                        x1 /= width_
-                        y1 /= height_
-                        x2 /= width_
-                        y2 /= height_
+                        x1 /= width_i
+                        y1 /= height_i
+                        x2 /= width_i
+                        y2 /= height_i
 
-                        target_.append([x1, y1, x2, y2, cls_id])  # [xmin, ymin, xmax, ymax, label_ind]
+                        target_i.append([x1, y1, x2, y2, cls_id])  # [xmin, ymin, xmax, ymax, label_ind]
                 # end here .
-                img_lists.append(img_)
-                tg_lists.append(target_)
-            # preprocess
-            img_processed_lists = []
-            tg_processed_lists = []
-            for img, target in zip(img_lists, tg_lists):
-                h, w, _ = img.shape
-                img_, scale, offset = self.preprocess(img, target, h, w)
-                if len(target) == 0:
-                    target = np.zeros([1, 5])
-                else:
-                    target = np.array(target)
-                    target[:, :4] = target[:, :4] * scale + offset
-                # augmentation
-                img, boxes, labels = self.transform(img_, target[:, :4], target[:, 4])
-                # to rgb
-                img = img[:, :, (2, 1, 0)]
-                # img = img.transpose(2, 0, 1)
-                target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
-                img_processed_lists.append(img)
-                tg_processed_lists.append(target)
-            # Then, we use mosaic augmentation
-            img_size = self.transform.size[0]
-            mosaic_img = np.zeros([img_size*2, img_size*2, 3])
-            
-            img_1, img_2, img_3, img_4 = img_processed_lists
-            tg_1, tg_2, tg_3, tg_4 = tg_processed_lists
-            # stitch images
-            mosaic_img[:img_size, :img_size] = img_1
-            mosaic_img[:img_size, img_size:] = img_2
-            mosaic_img[img_size:, :img_size] = img_3
-            mosaic_img[img_size:, img_size:] = img_4
-            mosaic_img = cv2.resize(mosaic_img, (img_size, img_size))
-            # modify targets
-            tg_1[:, :4] /= 2.0
-            tg_2[:, :4] = (tg_2[:, :4] + np.array([1., 0., 1., 0.])) / 2.0
-            tg_3[:, :4] = (tg_3[:, :4] + np.array([0., 1., 0., 1.])) / 2.0
-            tg_4[:, :4] = (tg_4[:, :4] + 1.0) / 2.0
-            target = np.concatenate([tg_1, tg_2, tg_3, tg_4], axis=0)
+                img_lists.append(img_i)
+                tg_lists.append(target_i)
 
-            return torch.from_numpy(mosaic_img).permute(2, 0, 1).float(), target, height, width, offset, scale
+            mosaic_img = np.zeros([self.img_size*2, self.img_size*2, img.shape[2]], dtype=np.uint8)
+            # mosaic center
+            yc, xc = [int(random.uniform(-x, 2*self.img_size + x)) for x in [-self.img_size // 2, -self.img_size // 2]]
+
+            mosaic_tg = []
+            for i in range(4):
+                img_i, target_i = img_lists[i], tg_lists[i]
+                h0, w0, _ = img_i.shape
+
+                # resize image to img_size
+                r = self.img_size / max(h0, w0)
+                if r != 1:  # always resize down, only resize up if training with augmentation
+                    img_i = cv2.resize(img_i, (int(w0 * r), int(h0 * r)))
+                h, w, _ = img_i.shape
+
+                # place img in img4
+                if i == 0:  # top left
+                    x1a, y1a, x2a, y2a = max(xc - w, 0), max(yc - h, 0), xc, yc  # xmin, ymin, xmax, ymax (large image)
+                    x1b, y1b, x2b, y2b = w - (x2a - x1a), h - (y2a - y1a), w, h  # xmin, ymin, xmax, ymax (small image)
+                elif i == 1:  # top right
+                    x1a, y1a, x2a, y2a = xc, max(yc - h, 0), min(xc + w, self.img_size * 2), yc
+                    x1b, y1b, x2b, y2b = 0, h - (y2a - y1a), min(w, x2a - x1a), h
+                elif i == 2:  # bottom left
+                    x1a, y1a, x2a, y2a = max(xc - w, 0), yc, xc, min(self.img_size * 2, yc + h)
+                    x1b, y1b, x2b, y2b = w - (x2a - x1a), 0, w, min(y2a - y1a, h)
+                elif i == 3:  # bottom right
+                    x1a, y1a, x2a, y2a = xc, yc, min(xc + w, self.img_size * 2), min(self.img_size * 2, yc + h)
+                    x1b, y1b, x2b, y2b = 0, 0, min(w, x2a - x1a), min(y2a - y1a, h)
+
+                mosaic_img[y1a:y2a, x1a:x2a] = img_i[y1b:y2b, x1b:x2b]
+                padw = x1a - x1b
+                padh = y1a - y1b
+
+                # labels
+                target_i = np.array(target_i)
+                target_i_ = target_i.copy()
+                if len(target_i) > 0:
+                    # a valid target, and modify it.
+                    target_i_[:, 0] = (w * (target_i[:, 0]) + padw)
+                    target_i_[:, 1] = (h * (target_i[:, 1]) + padh)
+                    target_i_[:, 2] = (w * (target_i[:, 2]) + padw)
+                    target_i_[:, 3] = (h * (target_i[:, 3]) + padh)     
+                    
+                    mosaic_tg.append(target_i_)
+
+            if len(mosaic_tg) == 0:
+                mosaic_tg = np.zeros([1, 5])
+            else:
+                mosaic_tg = np.concatenate(mosaic_tg, axis=0)
+                # Cutout/Clip targets
+                np.clip(mosaic_tg[:, :4], 0, 2 * self.img_size, out=mosaic_tg[:, :4])
+                # normalize
+                mosaic_tg[:, :4] /= (self.img_size * 2)
+
+            # augment
+            mosaic_img, boxes, labels = self.transform(mosaic_img, mosaic_tg[:, :4], mosaic_tg[:, 4])
+            # to rgb
+            mosaic_img = mosaic_img[:, :, (2, 1, 0)]
+            # img = img.transpose(2, 0, 1)
+            mosaic_tg = np.hstack((boxes, np.expand_dims(labels, axis=1)))
+
+            scale =  np.array([[1., 1., 1., 1.]])
+            offset = np.zeros([1, 4])
+
+            return torch.from_numpy(mosaic_img).permute(2, 0, 1).float(), mosaic_tg, self.img_size, self.img_size, offset, scale
 
         if self.transform is not None:
             # preprocess
@@ -314,6 +341,7 @@ if __name__ == "__main__":
     for i in range(1000):
         im, gt, h, w, offset, scale = dataset.pull_item(i)
         img = im.permute(1,2,0).numpy()[:, :, (2, 1, 0)].astype(np.uint8)
+        print(img.shape)
         for box in gt:
             xmin, ymin, xmax, ymax, _ = box
             xmin *= img_size
@@ -322,4 +350,5 @@ if __name__ == "__main__":
             ymax *= img_size
             img = cv2.rectangle(img, (int(xmin), int(ymin)), (int(xmax), int(ymax)), (0,0,255), 1)
         cv2.imshow('gt', img)
+        cv2.imwrite(str(i)+'.jpg', img)
         cv2.waitKey(0)
