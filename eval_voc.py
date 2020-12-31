@@ -43,6 +43,8 @@ parser.add_argument('-size', '--input_size', default=416, type=int,
 parser.add_argument('--trained_model', type=str,
                     default='weights_yolo_v2/yolo_v2_72.2.pth', 
                     help='Trained state_dict file path to open')
+parser.add_argument('--diou_nms', action='store_true', default=False,
+                    help='Use DIoU NMS')
 parser.add_argument('--save_folder', default='eval/', type=str,
                     help='File path to save results')
 parser.add_argument('--gpu_ind', default=0, type=int, 
@@ -415,7 +417,7 @@ if __name__ == '__main__':
         anchor_size = config.MULTI_ANCHOR_SIZE
         backbone = 'd-53'
         
-        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone)
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
         print('Let us test yolo_v3_plus on the VOC dataset ......')
     
     elif args.version == 'yolo_v3_plus_large':
@@ -423,7 +425,7 @@ if __name__ == '__main__':
         anchor_size = config.MULTI_ANCHOR_SIZE
         backbone = 'csp-l'
         
-        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone)
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
         print('Let us test yolo_v3_plus_large on the VOC dataset ......')
     
     elif args.version == 'yolo_v3_plus_medium':
@@ -431,7 +433,7 @@ if __name__ == '__main__':
         anchor_size = config.MULTI_ANCHOR_SIZE
         backbone = 'csp-m'
         
-        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone)
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
         print('Let us test yolo_v3_plus_medium on the VOC dataset ......')
     
     elif args.version == 'yolo_v3_plus_small':
@@ -439,7 +441,7 @@ if __name__ == '__main__':
         anchor_size = config.MULTI_ANCHOR_SIZE
         backbone = 'csp-s'
         
-        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone)
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
         print('Let us test yolo_v3_plus_small on the VOC dataset ......')
     
     # # yolo_v3_slim series: 
@@ -448,7 +450,7 @@ if __name__ == '__main__':
         anchor_size = config.MULTI_ANCHOR_SIZE
         backbone = 'd-tiny'
         
-        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone)
+        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
         print('Let us test yolo_v3_slim on the VOC dataset ......')
 
     elif args.version == 'yolo_v3_slim_csp':
@@ -456,7 +458,7 @@ if __name__ == '__main__':
         anchor_size = config.MULTI_ANCHOR_SIZE
         backbone = 'csp-slim'
         
-        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone)
+        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
         print('Let us test yolo_v3_slim_csp on the VOC dataset ......')
         
     # # yolo_v3_spp
@@ -465,7 +467,7 @@ if __name__ == '__main__':
         anchor_size = config.MULTI_ANCHOR_SIZE
         backbone = 'd-53'
         
-        yolo_net = YOLOv3SPP(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone)
+        yolo_net = YOLOv3SPP(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
         print('Let us test yolo-v3-spp on the VOC dataset ......')
 
     else:
