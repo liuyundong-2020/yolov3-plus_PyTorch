@@ -177,44 +177,6 @@ class YOLOv3Plus(nn.Module):
             inter = w * h
 
             ovr = inter / (areas[i] + areas[order[1:]] - inter)
-            if self.ciou:
-                # compute ciou
-                # # First, we need to compute diou
-                # # # compute the length of diagonal line
-                x1_, x2_ = x1[i].repeat(len(order[1:])), x2[i:i+1].repeat(len(order[1:]))
-                y1_, y2_ = y1[i].repeat(len(order[1:])), y2[i:i+1].repeat(len(order[1:]))
-                x1234 = np.stack([x1_, x2_, x1[order[1:]], x2[order[1:]]], axis=1)
-                y1234 = np.stack([y1_, y2_, y1[order[1:]], y2[order[1:]]], axis=1)
-
-                C = np.sqrt((np.max(x1234, axis=1) - np.min(x1234, axis=1))**2 + \
-                            (np.max(y1234, axis=1) - np.min(y1234, axis=1))**2)
-                # # # compute the distance between two center point
-                # # # points-1
-                points_1_x = (x1_ + x2_) / 2.
-                points_1_y = (y1_ + y2_) / 2.
-                # # points-2
-                points_2_x = (x1[order[1:]] + x2[order[1:]]) / 2.
-                points_2_y = (y1[order[1:]] + y2[order[1:]]) / 2.
-                D = np.sqrt((points_2_x - points_1_x)**2 + (points_2_y - points_1_y)**2)
-
-                # compute iou
-                iou = ovr
-
-                lens = D**2 / (C**2 + 1e-20)
-                diou = iou - lens
-
-                # # # Then compute ciou
-                # delta_x_1 = x2_ - x1_
-                # delta_x_2 = x2[order[1:]] - x1[order[1:]]
-
-                # delta_y_1 = y2_ - y1_ + 1e-15
-                # delta_y_2 = y2[order[1:]] - y1[order[1:]] + 1e-15
-                # v = 4. / np.pi**2 * ((np.arctan((delta_x_1) / (delta_y_1)) - np.arctan((delta_x_2) / (delta_y_2)))**2 + 1e-15)
-                # alpha = v / ((1-iou) + v)
-
-                # ciou = diou - alpha * v
-                ovr = diou
-                    
             #reserve all the boundingbox whose ovr less than thresh
             inds = np.where(ovr <= self.nms_thresh)[0]
             order = order[inds + 1]
