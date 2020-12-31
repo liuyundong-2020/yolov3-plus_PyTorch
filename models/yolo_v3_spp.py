@@ -8,7 +8,7 @@ import tools
 
 
 class YOLOv3SPP(nn.Module):
-    def __init__(self, device, input_size=None, num_classes=20, trainable=False, conf_thresh=0.001, nms_thresh=0.50, anchor_size=None, hr=False, backbone='d-53', ciou=False):
+    def __init__(self, device, input_size=None, num_classes=4, trainable=False, conf_thresh=0.001, nms_thresh=0.50, anchor_size=None, hr=False, backbone='d-53', ciou=False, diou_nms=False):
         super(YOLOv3SPP, self).__init__()
         self.device = device
         self.input_size = input_size
@@ -16,6 +16,7 @@ class YOLOv3SPP(nn.Module):
         self.trainable = trainable
         self.conf_thresh = conf_thresh
         self.nms_thresh = nms_thresh
+        self.nms_processor = self.diou_nms if diou_nms else self.nms
         self.bk = backbone
         self.ciou = ciou
         self.stride = [8, 16, 32]
@@ -47,7 +48,7 @@ class YOLOv3SPP(nn.Module):
         )
         self.conv_1x1_3 = Conv(512, 256, 1)
         self.extra_conv_3 = Conv(512, 1024, 3, p=1)
-        self.pred_3 = nn.Conv2d(1024, self.anchor_number*(1 + 4 + self.num_classes), 1)
+        self.pred_s32_ = nn.Conv2d(1024, self.anchor_number*(1 + 4 + self.num_classes), 1)
 
         # s = 16
         self.conv_set_2 = nn.Sequential(
@@ -59,7 +60,7 @@ class YOLOv3SPP(nn.Module):
         )
         self.conv_1x1_2 = Conv(256, 128, 1)
         self.extra_conv_2 = Conv(256, 512, 3, p=1)
-        self.pred_2 = nn.Conv2d(512, self.anchor_number*(1 + 4 + self.num_classes), 1)
+        self.pred_s16_ = nn.Conv2d(512, self.anchor_number*(1 + 4 + self.num_classes), 1)
 
         # s = 8
         self.conv_set_1 = nn.Sequential(
@@ -70,7 +71,7 @@ class YOLOv3SPP(nn.Module):
             Conv(256, 128, 1)
         )
         self.extra_conv_1 = Conv(128, 256, 3, p=1)
-        self.pred_1 = nn.Conv2d(256, self.anchor_number*(1 + 4 + self.num_classes), 1)
+        self.pred_s8_ = nn.Conv2d(256, self.anchor_number*(1 + 4 + self.num_classes), 1)
 
 
     def create_grid(self, input_size):
@@ -178,6 +179,60 @@ class YOLOv3SPP(nn.Module):
         return keep
 
 
+    def diou_nms(self, dets, scores):
+        """"Pure Python DIoU-NMS baseline."""
+        x1 = dets[:, 0]  #xmin
+        y1 = dets[:, 1]  #ymin
+        x2 = dets[:, 2]  #xmax
+        y2 = dets[:, 3]  #ymax
+
+        areas = (x2 - x1) * (y2 - y1)                 # the size of bbox
+        order = scores.argsort()[::-1]                        # sort bounding boxes by decreasing order
+
+        keep = []                                             # store the final bounding boxes
+        while order.size > 0:
+            i = order[0]                                      #the index of the bbox with highest confidence
+            keep.append(i)                                    #save it to keep
+            # compute iou
+            xx1 = np.maximum(x1[i], x1[order[1:]])
+            yy1 = np.maximum(y1[i], y1[order[1:]])
+            xx2 = np.minimum(x2[i], x2[order[1:]])
+            yy2 = np.minimum(y2[i], y2[order[1:]])
+
+            w = np.maximum(1e-28, xx2 - xx1)
+            h = np.maximum(1e-28, yy2 - yy1)
+            inter = w * h
+
+            iou = inter / (areas[i] + areas[order[1:]] - inter)
+            # compute diou
+            # # compute the length of diagonal line
+            x1_, x2_ = x1[i].repeat(len(order[1:])), x2[i:i+1].repeat(len(order[1:]))
+            y1_, y2_ = y1[i].repeat(len(order[1:])), y2[i:i+1].repeat(len(order[1:]))
+            x1234 = np.stack([x1_, x2_, x1[order[1:]], x2[order[1:]]], axis=1)
+            y1234 = np.stack([y1_, y2_, y1[order[1:]], y2[order[1:]]], axis=1)
+
+            C = np.sqrt((np.max(x1234, axis=1) - np.min(x1234, axis=1))**2 + \
+                        (np.max(y1234, axis=1) - np.min(y1234, axis=1))**2)
+            # # compute the distance between two center point
+            # # # points-1
+            points_1_x = (x1_ + x2_) / 2.
+            points_1_y = (y1_ + y2_) / 2.
+            # # points-2
+            points_2_x = (x1[order[1:]] + x2[order[1:]]) / 2.
+            points_2_y = (y1[order[1:]] + y2[order[1:]]) / 2.
+            D = np.sqrt((points_2_x - points_1_x)**2 + (points_2_y - points_1_y)**2)
+
+            lens = D**2 / (C**2 + 1e-20)
+            diou = iou - lens
+
+            ovr = diou                
+            #reserve all the boundingbox whose ovr less than thresh
+            inds = np.where(ovr <= self.nms_thresh)[0]
+            order = order[inds + 1]
+
+        return keep
+
+
     def postprocess(self, all_local, all_conf, exchange=True, im_shape=None):
         """
         bbox_pred: (HxW*anchor_n, 4), bsize = 1
@@ -239,15 +294,15 @@ class YOLOv3SPP(nn.Module):
         # head
         # s = 32
         fmp_3 = self.extra_conv_3(fmp_3)
-        pred_3 = self.pred_3(fmp_3)
+        pred_3 = self.pred_s32_(fmp_3)
 
         # s = 16
         fmp_2 = self.extra_conv_2(fmp_2)
-        pred_2 = self.pred_2(fmp_2)
+        pred_2 = self.pred_s16_(fmp_2)
 
         # s = 8
         fmp_1 = self.extra_conv_1(fmp_1)
-        pred_1 = self.pred_1(fmp_1)
+        pred_1 = self.pred_s8_(fmp_1)
 
         preds = [pred_1, pred_2, pred_3]
         total_conf_pred = []

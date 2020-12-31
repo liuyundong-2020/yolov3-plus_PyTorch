@@ -8,7 +8,7 @@ import tools
 
 
 class YOLOv3Plus(nn.Module):
-    def __init__(self, device, input_size=None, num_classes=20, trainable=False, conf_thresh=0.001, nms_thresh=0.50, anchor_size=None, hr=False, backbone='d-53', ciou=False):
+    def __init__(self, device, input_size=None, num_classes=20, trainable=False, conf_thresh=0.001, nms_thresh=0.5, anchor_size=None, hr=False, backbone='d-53', ciou=False, diou_nms=False):
         super(YOLOv3Plus, self).__init__()
         self.device = device
         self.input_size = input_size
@@ -16,6 +16,7 @@ class YOLOv3Plus(nn.Module):
         self.trainable = trainable
         self.conf_thresh = conf_thresh
         self.nms_thresh = nms_thresh
+        self.nms_processor = self.diou_nms if diou_nms else self.nms
         self.bk = backbone
         self.ciou = ciou
         self.stride = [8, 16, 32]
@@ -165,6 +166,7 @@ class YOLOv3Plus(nn.Module):
         while order.size > 0:
             i = order[0]                                      #the index of the bbox with highest confidence
             keep.append(i)                                    #save it to keep
+            # compute iou
             xx1 = np.maximum(x1[i], x1[order[1:]])
             yy1 = np.maximum(y1[i], y1[order[1:]])
             xx2 = np.minimum(x2[i], x2[order[1:]])
@@ -174,8 +176,99 @@ class YOLOv3Plus(nn.Module):
             h = np.maximum(1e-28, yy2 - yy1)
             inter = w * h
 
-            # Cross Area / (bbox + particular area - Cross Area)
             ovr = inter / (areas[i] + areas[order[1:]] - inter)
+            if self.ciou:
+                # compute ciou
+                # # First, we need to compute diou
+                # # # compute the length of diagonal line
+                x1_, x2_ = x1[i].repeat(len(order[1:])), x2[i:i+1].repeat(len(order[1:]))
+                y1_, y2_ = y1[i].repeat(len(order[1:])), y2[i:i+1].repeat(len(order[1:]))
+                x1234 = np.stack([x1_, x2_, x1[order[1:]], x2[order[1:]]], axis=1)
+                y1234 = np.stack([y1_, y2_, y1[order[1:]], y2[order[1:]]], axis=1)
+
+                C = np.sqrt((np.max(x1234, axis=1) - np.min(x1234, axis=1))**2 + \
+                            (np.max(y1234, axis=1) - np.min(y1234, axis=1))**2)
+                # # # compute the distance between two center point
+                # # # points-1
+                points_1_x = (x1_ + x2_) / 2.
+                points_1_y = (y1_ + y2_) / 2.
+                # # points-2
+                points_2_x = (x1[order[1:]] + x2[order[1:]]) / 2.
+                points_2_y = (y1[order[1:]] + y2[order[1:]]) / 2.
+                D = np.sqrt((points_2_x - points_1_x)**2 + (points_2_y - points_1_y)**2)
+
+                # compute iou
+                iou = ovr
+
+                lens = D**2 / (C**2 + 1e-20)
+                diou = iou - lens
+
+                # # # Then compute ciou
+                # delta_x_1 = x2_ - x1_
+                # delta_x_2 = x2[order[1:]] - x1[order[1:]]
+
+                # delta_y_1 = y2_ - y1_ + 1e-15
+                # delta_y_2 = y2[order[1:]] - y1[order[1:]] + 1e-15
+                # v = 4. / np.pi**2 * ((np.arctan((delta_x_1) / (delta_y_1)) - np.arctan((delta_x_2) / (delta_y_2)))**2 + 1e-15)
+                # alpha = v / ((1-iou) + v)
+
+                # ciou = diou - alpha * v
+                ovr = diou
+                    
+            #reserve all the boundingbox whose ovr less than thresh
+            inds = np.where(ovr <= self.nms_thresh)[0]
+            order = order[inds + 1]
+
+        return keep
+
+
+    def diou_nms(self, dets, scores):
+        """"Pure Python DIoU-NMS baseline."""
+        x1 = dets[:, 0]  #xmin
+        y1 = dets[:, 1]  #ymin
+        x2 = dets[:, 2]  #xmax
+        y2 = dets[:, 3]  #ymax
+
+        areas = (x2 - x1) * (y2 - y1)                 # the size of bbox
+        order = scores.argsort()[::-1]                        # sort bounding boxes by decreasing order
+
+        keep = []                                             # store the final bounding boxes
+        while order.size > 0:
+            i = order[0]                                      #the index of the bbox with highest confidence
+            keep.append(i)                                    #save it to keep
+            # compute iou
+            xx1 = np.maximum(x1[i], x1[order[1:]])
+            yy1 = np.maximum(y1[i], y1[order[1:]])
+            xx2 = np.minimum(x2[i], x2[order[1:]])
+            yy2 = np.minimum(y2[i], y2[order[1:]])
+
+            w = np.maximum(1e-28, xx2 - xx1)
+            h = np.maximum(1e-28, yy2 - yy1)
+            inter = w * h
+
+            iou = inter / (areas[i] + areas[order[1:]] - inter)
+            # compute diou
+            # # compute the length of diagonal line
+            x1_, x2_ = x1[i].repeat(len(order[1:])), x2[i:i+1].repeat(len(order[1:]))
+            y1_, y2_ = y1[i].repeat(len(order[1:])), y2[i:i+1].repeat(len(order[1:]))
+            x1234 = np.stack([x1_, x2_, x1[order[1:]], x2[order[1:]]], axis=1)
+            y1234 = np.stack([y1_, y2_, y1[order[1:]], y2[order[1:]]], axis=1)
+
+            C = np.sqrt((np.max(x1234, axis=1) - np.min(x1234, axis=1))**2 + \
+                        (np.max(y1234, axis=1) - np.min(y1234, axis=1))**2)
+            # # compute the distance between two center point
+            # # # points-1
+            points_1_x = (x1_ + x2_) / 2.
+            points_1_y = (y1_ + y2_) / 2.
+            # # points-2
+            points_2_x = (x1[order[1:]] + x2[order[1:]]) / 2.
+            points_2_y = (y1[order[1:]] + y2[order[1:]]) / 2.
+            D = np.sqrt((points_2_x - points_1_x)**2 + (points_2_y - points_1_y)**2)
+
+            lens = D**2 / (C**2 + 1e-20)
+            diou = iou - lens
+
+            ovr = diou                
             #reserve all the boundingbox whose ovr less than thresh
             inds = np.where(ovr <= self.nms_thresh)[0]
             order = order[inds + 1]
@@ -209,7 +302,7 @@ class YOLOv3Plus(nn.Module):
                 continue
             c_bboxes = bbox_pred[inds]
             c_scores = scores[inds]
-            c_keep = self.nms(c_bboxes, c_scores)
+            c_keep = self.nms_processor(c_bboxes, c_scores) # self.nms(c_bboxes, c_scores)
             keep[inds[c_keep]] = 1
 
         keep = np.where(keep > 0)

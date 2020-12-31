@@ -33,6 +33,12 @@ def parse_args():
                         type=str, help='The path to video files')
     parser.add_argument('--path_to_save', default='test_results/',
                         type=str, help='The path to save the detection results video')
+    parser.add_argument('--conf_thresh', default=0.1, type=float,
+                        help='Confidence threshold')
+    parser.add_argument('--nms_thresh', default=0.45, type=float,
+                        help='NMS threshold')
+    parser.add_argument('--diou_nms', action='store_true', default=False, 
+                        help='use diou_nms.')
     parser.add_argument('-vs','--vis_thresh', default=0.4,
                         type=float, help='visual threshold')
     
@@ -252,19 +258,19 @@ def run():
         print('loading YOLOv3Plus ...')
         from models.yolo_v3_plus import YOLOv3Plus
         anchor_size = MULTI_ANCHOR_SIZE_COCO
-        net = YOLOv3Plus(device, num_classes=80, input_size=input_size, anchor_size=anchor_size)
+        net = YOLOv3Plus(device, num_classes=80, input_size=input_size, anchor_size=anchor_size, conf_thresh=args.conf_thresh, nms_thresh=args.nms_thresh, diou_nms=args.diou_nms)
 
     elif args.version == 'yolo_v3_spp':
         print('loading YOLOv3Spp ...')
         from models.yolo_v3_spp import YOLOv3SPP
         anchor_size = MULTI_ANCHOR_SIZE_COCO
-        net = YOLOv3SPP(device, num_classes=80, input_size=input_size, anchor_size=anchor_size)
+        net = YOLOv3SPP(device, num_classes=80, input_size=input_size, anchor_size=anchor_size, conf_thresh=args.conf_thresh, nms_thresh=args.nms_thresh, diou_nms=args.diou_nms)
 
     elif args.version == 'yolo_v3_slim':
         print('loading YOLOv3Slim ...')
         from models.yolo_v3_slim import YOLOv3Slim
         anchor_size = MULTI_ANCHOR_SIZE_COCO
-        net = YOLOv3Slim(device, num_classes=80, input_size=input_size, anchor_size=anchor_size)
+        net = YOLOv3Slim(device, num_classes=80, input_size=input_size, anchor_size=anchor_size, conf_thresh=args.conf_thresh, nms_thresh=args.nms_thresh, diou_nms=args.diou_nms)
    
     else:
         print("We only support yolo_v3_plus, yolo_v3_spp, yolo_v3_slim, yolo_v3_tiny !! Please verify whether the --version or -v you entered meets the requirements ")

@@ -19,7 +19,7 @@ from torch.autograd import Variable
 import torch.optim as optim
 
 parser = argparse.ArgumentParser(description='YOLO Detection')
-parser.add_argument('-v', '--version', default='yolo_v3_spp',
+parser.add_argument('-v', '--version', default='yolo_v3_plus',
                     help='yolo_v3_plus, yolo_v3_plus_large, yolo_v3_plus_medium, yolo_v3_plus_small, \
                             yolo_v3_slim, yolo_v3_slim_csp, \
                             yolo_v3_spp.')

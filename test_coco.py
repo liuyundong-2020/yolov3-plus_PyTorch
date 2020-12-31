@@ -12,7 +12,7 @@ from decimal import *
 
 
 parser = argparse.ArgumentParser(description='YOLO-v2 Detection')
-parser.add_argument('-v', '--version', default='yolo_v3_spp',
+parser.add_argument('-v', '--version', default='yolo_v3_plus',
                     help='yolo_v3_plus, yolo_v3_plus_large, yolo_v3_plus_medium, yolo_v3_plus_small, \
                             yolo_v3_slim, yolo_v3_slim_csp, \
                             yolo_v3_spp.')
@@ -22,8 +22,14 @@ parser.add_argument('-size', '--input_size', default=416, type=int,
                     help='Batch size for training')
 parser.add_argument('--trained_model', default='weights/yolo_v2_72.2.pth',
                     type=str, help='Trained state_dict file path to open')
+parser.add_argument('--conf_thresh', default=0.1, type=float,
+                    help='Confidence threshold')
+parser.add_argument('--nms_thresh', default=0.45, type=float,
+                    help='NMS threshold')
 parser.add_argument('--visual_threshold', default=0.3, type=float,
                     help='Final confidence threshold')
+parser.add_argument('--diou_nms', action='store_true', default=False, 
+                    help='use diou_nms.')
 parser.add_argument('--cuda', action='store_true', default=False, 
                     help='use cuda.')
 parser.add_argument('-f', default=None, type=str, 
@@ -126,7 +132,7 @@ def test():
         anchor_size = config.MULTI_ANCHOR_SIZE_COCO
         backbone = 'd-53'
         
-        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone)
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, conf_thresh=args.conf_thresh, nms_thresh=args.nms_thresh, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
         print('Let us test yolo_v3_plus on the COCO dataset ......')
     
     elif args.version == 'yolo_v3_plus_large':
@@ -134,7 +140,7 @@ def test():
         anchor_size = config.MULTI_ANCHOR_SIZE_COCO
         backbone = 'csp-l'
         
-        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone)
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, conf_thresh=args.conf_thresh, nms_thresh=args.nms_thresh, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
         print('Let us test yolo_v3_plus_large on the COCO dataset ......')
     
     elif args.version == 'yolo_v3_plus_medium':
@@ -142,7 +148,7 @@ def test():
         anchor_size = config.MULTI_ANCHOR_SIZE_COCO
         backbone = 'csp-m'
         
-        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone)
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, conf_thresh=args.conf_thresh, nms_thresh=args.nms_thresh, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
         print('Let us test yolo_v3_plus_medium on the COCO dataset ......')
     
     elif args.version == 'yolo_v3_plus_small':
@@ -150,7 +156,7 @@ def test():
         anchor_size = config.MULTI_ANCHOR_SIZE_COCO
         backbone = 'csp-s'
         
-        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone)
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, conf_thresh=args.conf_thresh, nms_thresh=args.nms_thresh, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
         print('Let us test yolo_v3_plus_small on the COCO dataset ......')
     
     # # yolo_v3_slim series: 
@@ -159,7 +165,7 @@ def test():
         anchor_size = config.MULTI_ANCHOR_SIZE_COCO
         backbone = 'd-tiny'
         
-        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone)
+        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=num_classes, conf_thresh=args.conf_thresh, nms_thresh=args.nms_thresh, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
         print('Let us test yolo_v3_slim on the COCO dataset ......')
 
     elif args.version == 'yolo_v3_slim_csp':
@@ -167,7 +173,7 @@ def test():
         anchor_size = config.MULTI_ANCHOR_SIZE_COCO
         backbone = 'csp-slim'
         
-        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone)
+        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=num_classes, conf_thresh=args.conf_thresh, nms_thresh=args.nms_thresh, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
         print('Let us test yolo_v3_slim_csp on the COCO dataset ......')
         
     # # yolo_v3_spp
@@ -176,7 +182,7 @@ def test():
         anchor_size = config.MULTI_ANCHOR_SIZE_COCO
         backbone = 'd-53'
         
-        yolo_net = YOLOv3SPP(device, input_size=input_size, num_classes=num_classes, anchor_size=anchor_size, backbone=backbone)
+        yolo_net = YOLOv3SPP(device, input_size=input_size, num_classes=num_classes, conf_thresh=args.conf_thresh, nms_thresh=args.nms_thresh, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
         print('Let us test yolo-v3-spp on the COCO dataset ......')
 
     else:
