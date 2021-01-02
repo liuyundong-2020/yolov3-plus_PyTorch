@@ -1,11 +1,24 @@
 # yolov3-plus_PyTorch
 A better PyTorch version of YOLOv3. 
+
+I call it "YOLOv3-plus"~
+
+It is not the final version. I'm still trying to make it better and better.
+
 # A strong YOLOv3 PyTorch
 
-In this project, you can enjoy: 
+In this project, you can enjoy three basic detectors: 
 - yolo-v3-spp
 - yolo-v3-plus
 - yolo-v3-slim
+
+What's more, I also provide more excellent detector (still be training...) with several kinds of CSPDarknet:
+- yolo-v3-plus-large (with CSPDarknet-large)
+- yolo-v3-plus-medium (with CSPDarknet-medium)
+- yolo-v3-plus-small (with CSPDarknet-small)
+- yolo-v3-slim-csp (with CSPDarknet-slim / CSPDarknet-tiny )
+
+Of course, the CSPDarknets used in these new models are all trained by myself on ImageNet. My CSPDarknet is a little different from the one used in YOLOv4 and YOLOv5. I referred to YOLOv4, YOLOv5 and Scaled-YOLOv4. For more details, you can read my backbone files in ```backbone\cspdarknet.py```.
 
 # YOLOv3-SPP
 I try to reproduce YOLOv3 with SPP module.
@@ -61,7 +74,38 @@ COCO eval:
 <tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slim-608</th><td bgcolor=white> COCO eval </td><td bgcolor=white> 26.85 </td><td bgcolor=white> 47.58 </td></tr>
 </table></tbody>
 
+# More better YOLOv3-Plus and YOLOv3-Slim detectors
+
+On COCO (please hold on ...)
+<table><tbody>
+<tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> data </td><td bgcolor=white> size </td><td bgcolor=white> AP </td><td bgcolor=white> AP50 </td><td bgcolor=white> AP75 </td><td bgcolor=white> AP_S </td><td bgcolor=white> AP_M </td><td bgcolor=white> AP_L </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-large</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 320 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-large</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 416 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-large</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 608 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-medium</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 320 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-medium</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 416 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-medium</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 608 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-small</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 320 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-small</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 416 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-small</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 608 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slim-csp</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 320 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slim-csp</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 416 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slim-csp</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 608 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
+
 </table></tbody>
+
 
 ## Installation
 - Pytorch-gpu 1.1.0/1.2.0/1.3.0
