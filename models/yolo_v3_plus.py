@@ -36,6 +36,10 @@ class YOLOv3Plus(nn.Module):
             # use cspdarknet_large as backbone
             print('Use backbone: csp-l')
             self.backbone = cspdarknet_large(pretrained=trainable, hr=hr)
+        elif self.bk == 'csp-h':
+            # use cspdarknet_half as backbone
+            print('Use backbone: csp-h')
+            self.backbone = cspdarknet_half(pretrained=trainable, hr=hr)
         elif self.bk == 'csp-m':
             # use cspdarknet_medium as backbone
             print('Use backbone: csp-m')
@@ -58,7 +62,7 @@ class YOLOv3Plus(nn.Module):
         # head
         self.head_conv_0 = Conv(1024, 512, k=1)  # 10
         self.head_upsample_0 = UpSample(scale_factor=2)
-        self.head_csp_0 = BottleneckCSP(512 + 512, 512, n=3,shortcut=False)
+        self.head_csp_0 = BottleneckCSP(512 + 512, 512, n=3, shortcut=False)
 
         # P3/8-small
         self.head_conv_1 = Conv(512, 256, k=1)  # 14

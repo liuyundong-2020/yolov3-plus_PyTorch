@@ -18,8 +18,8 @@ import argparse
 def parse_args():
     parser = argparse.ArgumentParser(description='YOLO Detection')
     parser.add_argument('-v', '--version', default='yolo_v3_spp',
-                        help='yolo_v3_plus, yolo_v3_plus_large, yolo_v3_plus_medium, yolo_v3_plus_small, \
-                              yolo_v3_slim, yolo_v3_slim_csp, \
+                        help='yolo_v3_plus, yolo_v3_plus_large, yolo_v3_plus_half, yolo_v3_plus_medium, yolo_v3_plus_small, \
+                              yolo_v3_slim, yolo_v3_slim_csp, yolo_v3_slim_csp2, \
                               yolo_v3_spp.')
     parser.add_argument('-d', '--dataset', default='VOC',
                         help='VOC or COCO dataset')
@@ -125,6 +125,14 @@ def train():
         yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
         print('Let us train yolo_v3_plus_large on the VOC dataset ......')
     
+    elif args.version == 'yolo_v3_plus_half':
+        from models.yolo_v3_plus import YOLOv3Plus
+        anchor_size = MULTI_ANCHOR_SIZE
+        backbone = 'csp-h'
+        
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        print('Let us train yolo_v3_plus_half on the VOC dataset ......')
+        
     elif args.version == 'yolo_v3_plus_medium':
         from models.yolo_v3_plus import YOLOv3Plus
         anchor_size = MULTI_ANCHOR_SIZE
@@ -157,7 +165,15 @@ def train():
         
         yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
         print('Let us train yolo_v3_slim_csp on the VOC dataset ......')
+
+    elif args.version == 'yolo_v3_slim_csp2':
+        from models.yolo_v3_slim import YOLOv3Slim
+        anchor_size = MULTI_ANCHOR_SIZE
+        backbone = 'csp-tiny'
         
+        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone)
+        print('Let us train yolo_v3_slim_csp2 on the VOC dataset ......')
+
     # # yolo_v3_spp
     elif args.version == 'yolo_v3_spp':
         from models.yolo_v3_spp import YOLOv3SPP

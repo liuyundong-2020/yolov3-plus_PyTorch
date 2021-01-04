@@ -131,6 +131,47 @@ class CSPDarknet_large(nn.Module):
         return C3, C4, C5
 
 
+class CSPDarknet_half(nn.Module):
+    """
+    CSPDarknet_half.
+    """
+    def __init__(self, cfg='l', num_classes=1000):
+        super(CSPDarknet_half, self).__init__()
+            
+        self.layer_1 = nn.Sequential(
+            Focus(c1=3, c2=64, k=3, p=1),           
+            ResBlock(c1=64, n=1)                    # P1/2
+        )
+        self.layer_2 = nn.Sequential(
+            Conv(c1=64, c2=128, k=3, p=1, s=2),     
+            BottleneckCSP(c1=128, c2=128, n=1)      # P2/4
+        )
+        self.layer_3 = nn.Sequential(
+            Conv(c1=128, c2=256, k=3, p=1, s=2),    
+            BottleneckCSP(c1=256, c2=256, n=4)      # P3/8
+        )
+        self.layer_4 = nn.Sequential(
+            Conv(c1=256, c2=512, k=3, p=1, s=2),    
+            BottleneckCSP(c1=512, c2=512, n=4)      # P4/16
+        )
+        self.layer_5 = nn.Sequential(
+            Conv(c1=512, c2=1024, k=3, p=1, s=2),   
+            BottleneckCSP(c1=1024, c2=1024, n=2)    # P5/32
+        )
+
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(1024, num_classes)
+
+    def forward(self, x, targets=None):
+        C1 = self.layer_1(x)
+        C2 = self.layer_2(C1)
+        C3 = self.layer_3(C2)
+        C4 = self.layer_4(C3)
+        C5 = self.layer_5(C4)
+
+        return C3, C4, C5
+
+
 class CSPDarknet_medium(nn.Module):
     def __init__(self, cfg='l', num_classes=1000):
         super(CSPDarknet_medium, self).__init__()
@@ -302,6 +343,25 @@ def cspdarknet_large(pretrained=False, hr=False, **kwargs):
     return model
 
 
+def cspdarknet_half(pretrained=False, hr=False, **kwargs):
+    """Constructs a CSPDarknet_half model.
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    model = CSPDarknet_half()
+    if pretrained:
+        print('Loading the pretrained model ...')
+        path_to_dir = os.path.dirname(os.path.abspath(__file__))
+        if hr:
+            print('Loading the hi-res cspdarknet_half-448 ...')
+            model.load_state_dict(torch.load(path_to_dir + '/weights/cspdarknet_half/cspdarknet_half.pth', map_location='cuda'), strict=False)
+        else:
+            print('Loading the cspdarknet_half ...')
+            model.load_state_dict(torch.load(path_to_dir + '/weights/cspdarknet_half/cspdarknet_half.pth', map_location='cuda'), strict=False)
+    return model
+
+
 def cspdarknet_medium(pretrained=False, hr=False, **kwargs):
     """Constructs a CSPDarknet_medium model.
 
@@ -352,10 +412,10 @@ def cspdarknet_slim(pretrained=False, hr=False, **kwargs):
         path_to_dir = os.path.dirname(os.path.abspath(__file__))
         if hr:
             print('Loading the hi-res cspdarknet_slim-448 ...')
-            model.load_state_dict(torch.load(path_to_dir + '/weights/cspdarknet_slim/cspdarknet_slim.pth', map_location='cuda'), strict=False)
+            model.load_state_dict(torch.load(path_to_dir + '/weights/cspdarknet_slim/cspdarknet_slim_hr_65.42.pth', map_location='cuda'), strict=False)
         else:
             print('Loading the cspdarknet_slim ...')
-            model.load_state_dict(torch.load(path_to_dir + '/weights/cspdarknet_slim/cspdarknet_slim.pth', map_location='cuda'), strict=False)
+            model.load_state_dict(torch.load(path_to_dir + '/weights/cspdarknet_slim/cspdarknet_slim_66.43.pth', map_location='cuda'), strict=False)
     return model
 
 
@@ -371,8 +431,8 @@ def cspdarknet_tiny(pretrained=False, hr=False, **kwargs):
         path_to_dir = os.path.dirname(os.path.abspath(__file__))
         if hr:
             print('Loading the hi-res cspdarknet_tiny-448 ...')
-            model.load_state_dict(torch.load(path_to_dir + '/weights/cspdarknet_tiny/cspdarknet_tiny.pth', map_location='cuda'), strict=False)
+            model.load_state_dict(torch.load(path_to_dir + '/weights/cspdarknet_tiny/cspdarknet_tiny_hr_60.70.pth', map_location='cuda'), strict=False)
         else:
             print('Loading the cspdarknet_tiny ...')
-            model.load_state_dict(torch.load(path_to_dir + '/weights/cspdarknet_tiny/cspdarknet_tiny.pth', map_location='cuda'), strict=False)
+            model.load_state_dict(torch.load(path_to_dir + '/weights/cspdarknet_tiny/cspdarknet_tiny_62.20.pth', map_location='cuda'), strict=False)
     return model

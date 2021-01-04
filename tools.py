@@ -172,7 +172,7 @@ def multi_gt_creator(input_size, strides, label_lists=[], anchor_size=None):
             box_w = (xmax - xmin) * w
             box_h = (ymax - ymin) * h
 
-            if box_w < 1e-28 or box_h < 1e-28:
+            if box_w < 1. or box_h < 1.:
                 # print('A dirty data !!!')
                 continue    
 

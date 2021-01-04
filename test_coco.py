@@ -13,8 +13,8 @@ from decimal import *
 
 parser = argparse.ArgumentParser(description='YOLO-v2 Detection')
 parser.add_argument('-v', '--version', default='yolo_v3_plus',
-                    help='yolo_v3_plus, yolo_v3_plus_large, yolo_v3_plus_medium, yolo_v3_plus_small, \
-                            yolo_v3_slim, yolo_v3_slim_csp, \
+                    help='yolo_v3_plus, yolo_v3_plus_large, yolo_v3_plus_half, yolo_v3_plus_medium, yolo_v3_plus_small, \
+                            yolo_v3_slim, yolo_v3_slim_csp, yolo_v3_slim_csp2, \
                             yolo_v3_spp.')
 parser.add_argument('-d', '--dataset', default='COCO',
                     help='we use VOC-test or COCO-val to test.')
@@ -142,7 +142,15 @@ def test():
         
         yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, conf_thresh=args.conf_thresh, nms_thresh=args.nms_thresh, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
         print('Let us test yolo_v3_plus_large on the COCO dataset ......')
-    
+
+    elif args.version == 'yolo_v3_plus_half':
+        from models.yolo_v3_plus import YOLOv3Plus
+        anchor_size = config.MULTI_ANCHOR_SIZE_COCO
+        backbone = 'csp-h'
+        
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=num_classes, conf_thresh=args.conf_thresh, nms_thresh=args.nms_thresh, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
+        print('Let us test yolo_v3_plus_half on the COCO dataset ......')
+
     elif args.version == 'yolo_v3_plus_medium':
         from models.yolo_v3_plus import YOLOv3Plus
         anchor_size = config.MULTI_ANCHOR_SIZE_COCO
@@ -175,7 +183,15 @@ def test():
         
         yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=num_classes, conf_thresh=args.conf_thresh, nms_thresh=args.nms_thresh, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
         print('Let us test yolo_v3_slim_csp on the COCO dataset ......')
+
+    elif args.version == 'yolo_v3_slim_csp2':
+        from models.yolo_v3_slim import YOLOv3Slim
+        anchor_size = config.MULTI_ANCHOR_SIZE_COCO
+        backbone = 'csp-tiny'
         
+        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=num_classes, conf_thresh=args.conf_thresh, nms_thresh=args.nms_thresh, anchor_size=anchor_size, backbone=backbone, diou_nms=args.diou_nms)
+        print('Let us test yolo_v3_slim_csp2 on the COCO dataset ......')
+
     # # yolo_v3_spp
     elif args.version == 'yolo_v3_spp':
         from models.yolo_v3_spp import YOLOv3SPP

@@ -20,8 +20,8 @@ import torch.backends.cudnn as cudnn
 def parse_args():
     parser = argparse.ArgumentParser(description='YOLO Detection')
     parser.add_argument('-v', '--version', default='yolo_v3_spp',
-                        help='yolo_v3_plus, yolo_v3_plus_large, yolo_v3_plus_medium, yolo_v3_plus_small, \
-                              yolo_v3_slim, yolo_v3_slim_csp, \
+                        help='yolo_v3_plus, yolo_v3_plus_large, yolo_v3_plus_half, yolo_v3_plus_medium, yolo_v3_plus_small, \
+                              yolo_v3_slim, yolo_v3_slim_csp, yolo_v3_slim_csp2, \
                               yolo_v3_spp.')
     parser.add_argument('-d', '--dataset', default='VOC',
                         help='VOC or COCO dataset')
@@ -152,6 +152,14 @@ def train():
         yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
         print('Let us train yolo_v3_plus_large on the COCO dataset ......')
     
+    elif args.version == 'yolo_v3_plus_half':
+        from models.yolo_v3_plus import YOLOv3Plus
+        anchor_size = MULTI_ANCHOR_SIZE_COCO
+        backbone = 'csp-h'
+        
+        yolo_net = YOLOv3Plus(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
+        print('Let us train yolo_v3_plus_half on the COCO dataset ......')
+        
     elif args.version == 'yolo_v3_plus_medium':
         from models.yolo_v3_plus import YOLOv3Plus
         anchor_size = MULTI_ANCHOR_SIZE_COCO
@@ -184,6 +192,14 @@ def train():
         
         yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
         print('Let us train yolo_v3_slim_csp on the COCO dataset ......')
+
+    elif args.version == 'yolo_v3_slim_csp2':
+        from models.yolo_v3_slim import YOLOv3Slim
+        anchor_size = MULTI_ANCHOR_SIZE_COCO
+        backbone = 'csp-tiny'
+        
+        yolo_net = YOLOv3Slim(device, input_size=input_size, num_classes=args.num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
+        print('Let us train yolo_v3_slim_csp2 on the COCO dataset ......')
         
     # # yolo_v3_spp
     elif args.version == 'yolo_v3_spp':
@@ -325,6 +341,35 @@ def train():
 def set_lr(optimizer, lr):
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
+
+
+def vis_data(images, targets, input_size):
+    # vis data
+    mean=(0.406, 0.456, 0.485)
+    std=(0.225, 0.224, 0.229)
+    mean = np.array(mean, dtype=np.float32)
+    std = np.array(std, dtype=np.float32)
+    h, w = input_size
+
+    batch_size = images.size(0)
+    for i in range(batch_size):
+        img = images[i].clone().permute(1, 2, 0).cpu().numpy()[:, :, ::-1]
+        img = ((img * std + mean)*255).astype(np.uint8)
+        cv2.imwrite('1.jpg', img)
+        img_ = cv2.imread('1.jpg')
+        target = targets[i].clone()
+
+        for box in target:
+            xmin, ymin, xmax, ymax = box[:-1]
+            # print(xmin, ymin, xmax, ymax)
+            xmin *= w
+            ymin *= h
+            xmax *= w
+            ymax *= h
+            cv2.rectangle(img_, (int(xmin), int(ymin)), (int(xmax), int(ymax)), (0, 0, 255), 2)
+
+        cv2.imshow('img', img_)
+        cv2.waitKey(0)
 
 
 if __name__ == '__main__':
