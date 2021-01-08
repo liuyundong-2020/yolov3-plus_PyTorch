@@ -35,8 +35,12 @@ class YOLOv3Slim(nn.Module):
             # use cspdarknet_slim as backbone
             print('Use backbone: csp-slim')
             self.backbone = cspdarknet_slim(pretrained=trainable, hr=hr)
+        elif self.bk == 'csp-tiny':
+            # use cspdarknet_slim as backbone
+            print('Use backbone: csp-tiny')
+            self.backbone = cspdarknet_tiny(pretrained=trainable, hr=hr)
         else:
-            print("For YOLOv3Slim, we only support <d-tiny, csp-slim> as our backbone !!")
+            print("For YOLOv3Slim, we only support <d-tiny, csp-slim, csp-tiny> as our backbone !!")
             exit(0)
 
         # SPP

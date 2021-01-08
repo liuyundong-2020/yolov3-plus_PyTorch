@@ -105,7 +105,6 @@ def detect(args, net, device, transform, mode='image', path_to_img=None, path_to
                 frame_, offset, h, w = preprocess(frame)
 
                 # to rgb
-                frame_ = frame_[:, :, (2, 1, 0)]
                 x = torch.from_numpy(transform(frame_)[0][:, :, (2, 1, 0)]).permute(2, 0, 1)
                 x = x.unsqueeze(0).to(device)
 
@@ -141,7 +140,6 @@ def detect(args, net, device, transform, mode='image', path_to_img=None, path_to
             img_, offset, h, w = preprocess(img)
 
             # to rgb
-            img_ = img_[:, :, (2, 1, 0)]
             x = torch.from_numpy(transform(img_)[0][:, :, (2, 1, 0)]).permute(2, 0, 1)
             x = x.unsqueeze(0).to(device)
 
@@ -178,7 +176,6 @@ def detect(args, net, device, transform, mode='image', path_to_img=None, path_to
                 frame_, offset, h, w = preprocess(frame)
 
                 # to rgb
-                frame_ = frame_[:, :, (2, 1, 0)]
                 x = torch.from_numpy(transform(frame_)[0][:, :, (2, 1, 0)]).permute(2, 0, 1)
                 x = x.unsqueeze(0).to(device)
 
