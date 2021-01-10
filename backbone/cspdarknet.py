@@ -90,6 +90,47 @@ class BottleneckCSP(nn.Module):
         return self.cv4(self.act(self.bn(torch.cat((y1, y2), dim=1))))
 
 
+class CSPDarknet_X(nn.Module):
+    """
+    CSPDarknet_X.
+    """
+    def __init__(self, num_classes=1000):
+        super(CSPDarknet_X, self).__init__()
+            
+        self.layer_1 = nn.Sequential(
+            Focus(c1=3, c2=64, k=3, p=1),           
+            ResBlock(c1=64, n=1)                    # P1/2
+        )
+        self.layer_2 = nn.Sequential(
+            Conv(c1=64, c2=128, k=3, p=1, s=2),     
+            BottleneckCSP(c1=128, c2=128, n=3)      # P2/4
+        )
+        self.layer_3 = nn.Sequential(
+            Conv(c1=128, c2=256, k=3, p=1, s=2),    
+            BottleneckCSP(c1=256, c2=256, n=9)      # P3/8
+        )
+        self.layer_4 = nn.Sequential(
+            Conv(c1=256, c2=512, k=3, p=1, s=2),    
+            BottleneckCSP(c1=512, c2=512, n=9)      # P4/16
+        )
+        self.layer_5 = nn.Sequential(
+            Conv(c1=512, c2=1024, k=3, p=1, s=2),   
+            BottleneckCSP(c1=1024, c2=1024, n=4)    # P5/32
+        )
+
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(1024, num_classes)
+
+    def forward(self, x, targets=None):
+        C1 = self.layer_1(x)
+        C2 = self.layer_2(C1)
+        C3 = self.layer_3(C2)
+        C4 = self.layer_4(C3)
+        C5 = self.layer_5(C4)
+
+        return C3, C4, C5
+
+
 class CSPDarknet_large(nn.Module):
     """
     CSPDarknet_large.
@@ -322,6 +363,25 @@ class CSPDarknet_tiny(nn.Module):
         C5 = self.layer_5(C4)
 
         return C3, C4, C5
+
+
+def cspdarknet_x(pretrained=False, hr=False, **kwargs):
+    """Constructs a CSPDarknet_X model.
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    model = CSPDarknet_X()
+    if pretrained:
+        print('Loading the pretrained model ...')
+        path_to_dir = os.path.dirname(os.path.abspath(__file__))
+        if hr:
+            print('Loading the hi-res cspdarknet_x-448 ...')
+            model.load_state_dict(torch.load(path_to_dir + '/weights/cspdarknet_x/cspdarknet_x_hr.pth', map_location='cuda'), strict=False)
+        else:
+            print('Loading the cspdarknet_x ...')
+            model.load_state_dict(torch.load(path_to_dir + '/weights/cspdarknet_x/cspdarknet_x.pth', map_location='cuda'), strict=False)
+    return model
 
 
 def cspdarknet_large(pretrained=False, hr=False, **kwargs):
