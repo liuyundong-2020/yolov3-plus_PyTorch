@@ -1,110 +1,104 @@
 # yolov3-plus_PyTorch
 A better PyTorch version of YOLOv3. 
 
-I call it "YOLOv3-plus"~
+I call it "YOLOv3Plus"~
 
 It is not the final version. I'm still trying to make it better and better.
 
 # A strong YOLOv3 PyTorch
 
-In this project, you can enjoy three basic detectors: 
-- yolo-v3-spp
-- yolo-v3-plus
-- yolo-v3-slim
+In this project, you can enjoy several excellent detectors: 
 
-What's more, I also provide more excellent detector (still be training...) with several kinds of CSPDarknet:
-- yolo-v3-plus-large (with CSPDarknet-large)
-- yolo-v3-plus-medium (with CSPDarknet-medium)
-- yolo-v3-plus-small (with CSPDarknet-small)
-- yolo-v3-slim-csp (with CSPDarknet-slim / CSPDarknet-tiny )
+YOLOv3Plus: 
+- YOLOv3Plus (with my Darknet53)
+- YOLOv3Plus-x (with my CSPDarknet-X)
+- YOLOv3Plus-l (with my CSPDarknet-large)
+- YOLOv3Plus-m (with my CSPDarknet-medium)
+- YOLOv3Plus-s (with my CSPDarknet-small)
+
+YOLOv3Slim:
+- YOLOv3Slim (with my Darknet_tiny)
+- YOLOv3Slim-csp (with my CSPDarknet-tiny )
 
 Of course, the CSPDarknets used in these new models are all trained by myself on ImageNet. My CSPDarknet is a little different from the one used in YOLOv4 and YOLOv5. I referred to YOLOv4, YOLOv5 and Scaled-YOLOv4. For more details, you can read my backbone files in ```backbone\cspdarknet.py```.
 
-# YOLOv3-SPP
-I try to reproduce YOLOv3 with SPP module.
-
-VOC:
-
-<table><tbody>
-<tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> size </td> <td bgcolor=white> Ours </td></tr>
-<tr><th align="left" bgcolor=#f8f8f8> VOC07 test</th> <td bgcolor=white> 416 </td> <td bgcolor=white> 81.6 </td></tr>
-<tr><th align="left" bgcolor=#f8f8f8> VOC07 test</th> <td bgcolor=white> 608 </td> <td bgcolor=white> 82.5 </td></tr>
-</table></tbody>
-
-COCO:
-
-<table><tbody>
-<tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> data </td><td bgcolor=white> AP </td><td bgcolor=white> AP50 </td><td bgcolor=white> AP75 </td><td bgcolor=white> AP_S </td><td bgcolor=white> AP_M </td><td bgcolor=white> AP_L </td></tr>
-
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-SPP-320</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 31.7 </td><td bgcolor=white> 52.6 </td><td bgcolor=white> 32.9 </td><td bgcolor=white> 10.9 </td><td bgcolor=white> 33.2 </td><td bgcolor=white> 48.6 </td></tr>
-
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-SPP-416</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 34.6 </td><td bgcolor=white> 56.1 </td><td bgcolor=white> 36.3 </td><td bgcolor=white> 14.7 </td><td bgcolor=white> 36.2 </td><td bgcolor=white> 50.1 </td></tr>
-
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-SPP-608</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 37.1 </td><td bgcolor=white> 58.9 </td><td bgcolor=white> 39.3 </td><td bgcolor=white> 19.6 </td><td bgcolor=white> 39.5 </td><td bgcolor=white> 48.5 </td></tr>
-</table></tbody>
-
-So, just have fun !
-
-# YOLOv3-Plus
-I add PAN module into the above YOLOv3-SPP, and get a better detector:
+# YOLOv3Plus
+I use SPP and PAN module into my YOLOv3Plus, and get a better detector:
 
 On COCO eval:
 
 <table><tbody>
-<tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> data </td><td bgcolor=white> AP </td><td bgcolor=white> AP50 </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> size </td><td bgcolor=white> data </td><td bgcolor=white> AP </td><td bgcolor=white> AP50 </td><td bgcolor=white> AP75 </td><td bgcolor=white> AP-S </td><td bgcolor=white> AP-M </td><td bgcolor=white> AP-L </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-SPP-416</th><td bgcolor=white> COCO eval </td><td bgcolor=white> 37.40 </td><td bgcolor=white> 57.42 </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-SPP-608</th><td bgcolor=white> COCO eval </td><td bgcolor=white> 40.02 </td><td bgcolor=white> 60.45 </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus</th><td bgcolor=white> 320 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus</th><td bgcolor=white> 416 </td><td bgcolor=white> COCO eval </td><td bgcolor=white> 37.40 </td><td bgcolor=white> 57.42 </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus</th><td bgcolor=white> 608 </td><td bgcolor=white> COCO eval </td><td bgcolor=white> 40.02 </td><td bgcolor=white> 60.45 </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8>-</th><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus-X</th><td bgcolor=white> 320 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus-X</th><td bgcolor=white> 416 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus-X</th><td bgcolor=white> 608 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white> </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8>-</th><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus-L</th><td bgcolor=white> 320 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus-L</th><td bgcolor=white> 416 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus-L</th><td bgcolor=white> 608 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white> </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8>-</th><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus-M</th><td bgcolor=white> 320 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus-M</th><td bgcolor=white> 416 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus-M</th><td bgcolor=white> 608 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white> </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8>-</th><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus-S</th><td bgcolor=white> 320 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus-S</th><td bgcolor=white> 416 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus-S</th><td bgcolor=white> 608 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white> </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
 </table></tbody>
 
+# YOLOv3Slim
+I also provide two lightweight detectors: YOLOv3Slim and YOLOv3Slim-csp.
 
-# YOLOv3-Slim
-I also provide a lightweight detector: YOLOv3-Slim.
-
-It is very simple. The backbone network, darknet_tiny, consists of only 10 conv layers. The neck is SPP same to as the one used in my YOLOv3-Plus. And the head is FPN+PAN with less conv layers and conv kernels.
+It is very simple. The backbone network, my darknet_tiny (or my cspdarknet_tiny). The neck is SPP same to as the one used in my YOLOv3Plus. And the head is FPN+PAN with less conv layers and conv kernels.
 
 COCO eval:
 
 <table><tbody>
-<tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> data </td><td bgcolor=white> AP </td><td bgcolor=white> AP50 </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> size </td><td bgcolor=white> data </td><td bgcolor=white> AP </td><td bgcolor=white> AP50 </td><td bgcolor=white> AP75 </td><td bgcolor=white> AP-S </td><td bgcolor=white> AP-M </td><td bgcolor=white> AP-L </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slim-416</th><td bgcolor=white> COCO eval </td><td bgcolor=white> 26.08 </td><td bgcolor=white> 45.65 </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim</th><td bgcolor=white> 320 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slim-608</th><td bgcolor=white> COCO eval </td><td bgcolor=white> 26.85 </td><td bgcolor=white> 47.58 </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim</th><td bgcolor=white> 416 </td><td bgcolor=white> COCO eval </td><td bgcolor=white> 26.08 </td><td bgcolor=white> 45.65 </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim</th><td bgcolor=white> 608 </td><td bgcolor=white> COCO eval </td><td bgcolor=white> 26.85 </td><td bgcolor=white> 47.58 </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8>-</th><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim-csp</th><td bgcolor=white> 320 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim-csp</th><td bgcolor=white> 416 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim-csp</th><td bgcolor=white> 608 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
 </table></tbody>
 
-# More better YOLOv3-Plus and YOLOv3-Slim detectors
+I am try to finish this project as soon as possible, but I have no much GPUs to train them. 
 
-On COCO (please hold on ...)
-<table><tbody>
-<tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> data </td><td bgcolor=white> size </td><td bgcolor=white> AP </td><td bgcolor=white> AP50 </td><td bgcolor=white> AP75 </td><td bgcolor=white> AP_S </td><td bgcolor=white> AP_M </td><td bgcolor=white> AP_L </td></tr>
-
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-large</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 320 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
-
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-large</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 416 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
-
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-large</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 608 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
-
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-medium</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 320 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
-
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-medium</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 416 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
-
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-medium</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 608 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
-
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-small</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 320 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
-
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-small</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 416 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
-
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Plus-small</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 608 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
-
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slim-csp</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 320 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
-
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slim-csp</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 416 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
-
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3-Slim-csp</th><td bgcolor=white> COCO test-dev </td><td bgcolor=white> 608 </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td><td bgcolor=white>      </td></tr>
-
-</table></tbody>
+Please patiently wait ...
 
 
 ## Installation
