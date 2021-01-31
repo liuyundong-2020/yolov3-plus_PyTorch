@@ -31,11 +31,11 @@ On COCO eval:
 <tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> size </td><td bgcolor=white> data </td><td bgcolor=white> AP </td><td bgcolor=white> AP50 </td><td bgcolor=white> AP75 </td><td bgcolor=white> AP-S </td><td bgcolor=white> AP-M </td><td bgcolor=white> AP-L </td></tr>
 
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus</th><td bgcolor=white> 320 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus</th><td bgcolor=white> 320 </td><td bgcolor=white> COCO eval </td><td bgcolor=white> 34.01 </td><td bgcolor=white> 53.58 </td><td bgcolor=white> 35.1 </td><td bgcolor=white> 12.2 </td><td bgcolor=white> 37.5 </td><td bgcolor=white> 53.8 </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus</th><td bgcolor=white> 416 </td><td bgcolor=white> COCO eval </td><td bgcolor=white> 37.40 </td><td bgcolor=white> 57.42 </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus</th><td bgcolor=white> 416 </td><td bgcolor=white> COCO eval </td><td bgcolor=white> 37.40 </td><td bgcolor=white> 57.42 </td><td bgcolor=white> 39.0 </td><td bgcolor=white> 17.6 </td><td bgcolor=white> 40.7 </td><td bgcolor=white> 55.9 </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus</th><td bgcolor=white> 608 </td><td bgcolor=white> COCO eval </td><td bgcolor=white> 40.02 </td><td bgcolor=white> 60.45 </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Plus</th><td bgcolor=white> 608 </td><td bgcolor=white> COCO eval </td><td bgcolor=white> 40.02 </td><td bgcolor=white> 60.45 </td><td bgcolor=white> 42.3 </td><td bgcolor=white> 22.4 </td><td bgcolor=white> 44.1 </td><td bgcolor=white> 54.2 </td></tr>
 
 <tr><th align="left" bgcolor=#f8f8f8>-</th><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td></tr>
 
