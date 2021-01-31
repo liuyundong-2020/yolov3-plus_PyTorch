@@ -1,8 +1,6 @@
 """VOC Dataset Classes
-
 Original author: Francisco Massa
 https://github.com/fmassa/vision/blob/voc_dataset/torchvision/datasets/voc.py
-
 Updated by: Ellis Brown, Max deGroot
 """
 import os.path as osp
@@ -30,7 +28,6 @@ VOC_ROOT = "/home/k545/object-detection/dataset/VOCdevkit/"
 class VOCAnnotationTransform(object):
     """Transforms a VOC annotation into a Tensor of bbox coords and label index
     Initilized with a dictionary lookup of classnames to indexes
-
     Arguments:
         class_to_ind (dict, optional): dictionary lookup of classnames -> indexes
             (default: alphabetic indexing of VOC's 20 classes)
@@ -78,9 +75,7 @@ class VOCAnnotationTransform(object):
 
 class VOCDetection(data.Dataset):
     """VOC Detection Dataset Object
-
     input is image, target is annotation
-
     Arguments:
         root (string): filepath to VOCdevkit folder.
         image_set (string): imageset to use (eg. 'train', 'val', 'test')
@@ -95,12 +90,15 @@ class VOCDetection(data.Dataset):
 
     def __init__(self, root, img_size,
                  image_sets=[('2007', 'trainval'), ('2012', 'trainval')],
-                 transform=None, target_transform=VOCAnnotationTransform(),
+                 transform=None, 
+                 base_transform=None,
+                 target_transform=VOCAnnotationTransform(),
                  dataset_name='VOC0712', mosaic=False):
         self.root = root
         self.img_size = img_size
         self.image_set = image_sets
         self.transform = transform
+        self.base_transform = base_transform
         self.target_transform = target_transform
         self.name = dataset_name
         self._annopath = osp.join('%s', 'Annotations', '%s.xml')
@@ -228,7 +226,7 @@ class VOCDetection(data.Dataset):
                 mosaic_tg[:, :4] /= (self.img_size * 2)
 
             # augment
-            mosaic_img, boxes, labels = self.transform(mosaic_img, mosaic_tg[:, :4], mosaic_tg[:, 4])
+            mosaic_img, boxes, labels = self.base_transform(mosaic_img, mosaic_tg[:, :4], mosaic_tg[:, 4])
             # to rgb
             mosaic_img = mosaic_img[:, :, (2, 1, 0)]
             # img = img.transpose(2, 0, 1)
@@ -260,10 +258,8 @@ class VOCDetection(data.Dataset):
 
     def pull_image(self, index):
         '''Returns the original image object at index in PIL form
-
         Note: not using self.__getitem__(), as any transformations passed in
         could mess up this functionality.
-
         Argument:
             index (int): index of img to show
         Return:
@@ -274,10 +270,8 @@ class VOCDetection(data.Dataset):
 
     def pull_anno(self, index):
         '''Returns the original annotation of image at index
-
         Note: not using self.__getitem__(), as any transformations passed in
         could mess up this functionality.
-
         Argument:
             index (int): index of img to get annotation of
         Return:
@@ -291,10 +285,8 @@ class VOCDetection(data.Dataset):
 
     def pull_tensor(self, index):
         '''Returns the original image at an index in tensor form
-
         Note: not using self.__getitem__(), as any transformations passed in
         could mess up this functionality.
-
         Argument:
             index (int): index of img to show
         Return:
@@ -321,8 +313,9 @@ if __name__ == "__main__":
     img_size = 640
     # dataset
     dataset = VOCDetection(VOC_ROOT, img_size, [('2007', 'trainval')],
-                            BaseTransform([img_size, img_size], (0, 0, 0)),
-                            VOCAnnotationTransform(), mosaic=True)
+                            transform=BaseTransform([img_size, img_size], (0, 0, 0)),
+                            base_transform=BaseTransform([img_size, img_size], (0, 0, 0)),
+                            mosaic=True)
     for i in range(1000):
         im, gt, h, w, _, _ = dataset.pull_item(i)
         img = im.permute(1,2,0).numpy()[:, :, (2, 1, 0)].astype(np.uint8)

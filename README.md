@@ -107,7 +107,6 @@ Please patiently wait ...
 - opencv-python, python3.6/3.7
 
 ## Dataset
-As for now, I only train and test on PASCAL VOC2007 and 2012. 
 
 ### VOC Dataset
 I copy the download files from the following excellent project:
@@ -145,46 +144,43 @@ Just run ```sh data/scripts/COCO2017.sh```. You will get COCO train2017, val2017
 ## Train
 ### VOC
 ```Shell
-python train_voc.py -v [select a model] -hr -ms --cuda
+python train.py -d voc --cuda -v [select a model] -hr -ms
 ```
 
-You can run ```python train_voc.py -h``` to check all optional argument.
+You can run ```python train.py -h``` to check all optional argument.
 
 ### COCO
 ```Shell
-python train_coco.py -v [select a model] -hr -ms --cuda
+python train.py -d coco --cuda -v [select a model] -hr -ms
 ```
 
 
 ## Test
 ### VOC
 ```Shell
-python test_voc.py -v [select a model] --trained_model [ Please input the path to model dir. ] --cuda
+python test.py -d voc --cuda -v [select a model] --trained_model [ Please input the path to model dir. ]
 ```
 
 ### COCO
 ```Shell
-python test_coco.py -v [select a model] --trained_model [ Please input the path to model dir. ] --cuda
+python test.py -d coco-val --cuda -v [select a model] --trained_model [ Please input the path to model dir. ]
 ```
 
 
 ## Evaluation
 ### VOC
 ```Shell
-python eval_voc.py -v [select a model] --train_model [ Please input the path to model dir. ] --cuda
+python eval.py -d voc --cuda -v [select a model] --train_model [ Please input the path to model dir. ]
 ```
 
 ### COCO
 To run on COCO_val:
 ```Shell
-python eval_coco.py -v [select a model] --train_model [ Please input the path to model dir. ] --cuda
+python eval.py -d coco-val --cuda -v [select a model] --train_model [ Please input the path to model dir. ]
 ```
 
 To run on COCO_test-dev(You must be sure that you have downloaded test2017):
 ```Shell
-python eval_coco.py -v [select a model] --train_model [ Please input the path to model dir. ] --cuda -t
+python eval.py -d coco-test --cuda -v [select a model] --train_model [ Please input the path to model dir. ]
 ```
 You will get a .json file which can be evaluated on COCO test server.
-
-You can run ```python train_voc.py -h``` to check all optional argument.
-

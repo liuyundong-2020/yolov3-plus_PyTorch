@@ -2,20 +2,9 @@
 
 IGNORE_THRESH = 0.5
 
-voc_ab = {
-    'num_classes': 20,
-    'lr_epoch': (150, 200), # (60, 90, 160),
-    'max_epoch': 250,
-    'min_dim': [416, 416],
-    'name': 'VOC',
-}
-
-coco_ab = {
-    'num_classes': 80,
-    'lr_epoch': (150, 200), # (60, 90, 160),
-    'max_epoch': 260,
-    'min_dim': [416, 416],
-    'name': 'COCO',
+train_cfg = {
+    'lr_epoch': (150, 200),
+    'max_epoch': 260
 }
 
 # multi level anchor box config for VOC and COCO

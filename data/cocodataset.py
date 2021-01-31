@@ -39,7 +39,9 @@ class COCODataset(Dataset):
     """
     def __init__(self, data_dir='COCO', json_file='instances_train2017.json',
                  name='train2017', img_size=416,
-                 transform=None, min_size=1, debug=False, mosaic=False):
+                 transform=None, 
+                 base_transform=None,
+                 min_size=1, debug=False, mosaic=False):
         """
         COCO dataset initialization. Annotation data are read into memory by COCO API.
         Args:
@@ -63,6 +65,7 @@ class COCODataset(Dataset):
         self.img_size = img_size
         self.min_size = min_size
         self.transform = transform
+        self.base_transform = base_transform
         self.mosaic = mosaic
 
     def __len__(self):
@@ -285,7 +288,7 @@ class COCODataset(Dataset):
                 mosaic_tg[:, :4] /= (self.img_size * 2)
 
             # augment
-            mosaic_img, boxes, labels = self.transform(mosaic_img, mosaic_tg[:, :4], mosaic_tg[:, 4])
+            mosaic_img, boxes, labels = self.base_transform(mosaic_img, mosaic_tg[:, :4], mosaic_tg[:, 4])
             # to rgb
             mosaic_img = mosaic_img[:, :, (2, 1, 0)]
             # img = img.transpose(2, 0, 1)
@@ -335,6 +338,7 @@ if __name__ == "__main__":
                 data_dir='/home/k545/object-detection/dataset/COCO/',
                 img_size=img_size,
                 transform=BaseTransform([img_size, img_size], (0, 0, 0)),
+                base_transform=BaseTransform([img_size, img_size], (0, 0, 0)),
                 debug=False,
                 mosaic=True)
     

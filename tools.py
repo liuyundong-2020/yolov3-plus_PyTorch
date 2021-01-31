@@ -4,7 +4,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
-CLASS_COLOR = [(np.random.randint(255),np.random.randint(255),np.random.randint(255)) for _ in range(len(VOC_CLASSES))]
 # We use ignore thresh to decide which anchor box can be kept.
 ignore_thresh = IGNORE_THRESH
 
@@ -43,23 +42,6 @@ class MSELoss(nn.Module):
         else:
             return pos_loss, neg_loss
 
-
-class BCE_focal_loss(nn.Module):
-    def __init__(self,  weight=None, gamma=2, reduction='mean'):
-        super(BCE_focal_loss, self).__init__()
-        self.gamma = gamma
-        self.reduction = reduction
-    def forward(self, inputs, targets):
-        pos_id = (targets==1.0).float()
-        neg_id = (1 - pos_id).float()
-        pos_loss = -pos_id * (1.0-inputs)**self.gamma * torch.log(inputs + 1e-14)
-        neg_loss = -neg_id * (inputs)**self.gamma * torch.log(1.0 - inputs + 1e-14)
-
-        if self.reduction == 'mean':
-            return torch.mean(torch.sum(pos_loss+neg_loss, 1))
-        else:
-            return pos_loss+neg_loss
-  
 
 def generate_anchor(input_size, stride, anchor_scale, anchor_aspect):
     """
