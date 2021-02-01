@@ -118,31 +118,6 @@ class VOCDetection(data.Dataset):
     def __len__(self):
         return len(self.ids)
 
-    def preprocess(self, img, target, height, width):
-        # zero padding
-        if height > width:
-            img_ = np.zeros([height, height, 3])
-            delta_w = height - width
-            left = delta_w // 2
-            img_[:, left:left+width, :] = img
-            offset = np.array([[ left / height, 0.,  left / height, 0.]])
-            scale =  np.array([[width / height, 1., width / height, 1.]])
-
-        elif height < width:
-            img_ = np.zeros([width, width, 3])
-            delta_h = width - height
-            top = delta_h // 2
-            img_[top:top+height, :, :] = img
-            offset = np.array([[0.,    top / width, 0.,    top / width]])
-            scale =  np.array([[1., height / width, 1., height / width]])
-        
-        else:
-            img_ = img
-            scale =  np.array([[1., 1., 1., 1.]])
-            offset = np.zeros([1, 4])
-
-        return img_, scale, offset
-
     def pull_item(self, index):
         img_id = self.ids[index]
 
@@ -260,7 +235,7 @@ class VOCDetection(data.Dataset):
             PIL img
         '''
         img_id = self.ids[index]
-        return cv2.imread(self._imgpath % img_id, cv2.IMREAD_COLOR)
+        return cv2.imread(self._imgpath % img_id, cv2.IMREAD_COLOR), img_id
 
     def pull_anno(self, index):
         '''Returns the original annotation of image at index
