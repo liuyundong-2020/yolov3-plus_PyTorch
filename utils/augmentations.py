@@ -105,6 +105,36 @@ class ToPercentCoords(object):
         return image, boxes, labels
 
 
+class ZeroPad(object):
+    def __call__(self, image, boxes=None, labels=None):
+        height, width, _ = image.shape
+        # zero padding
+        if height > width:
+            image_ = np.zeros([height, height, 3])
+            delta_w = height - width
+            left = delta_w // 2
+            image_[:, left:left+width, :] = image
+            offset = np.array([[ left / height, 0.,  left / height, 0.]])
+            scale =  np.array([[width / height, 1., width / height, 1.]])
+
+        elif height < width:
+            image_ = np.zeros([width, width, 3])
+            delta_h = width - height
+            top = delta_h // 2
+            image_[top:top+height, :, :] = image
+            offset = np.array([[0.,    top / width, 0.,    top / width]])
+            scale =  np.array([[1., height / width, 1., height / width]])
+
+        else:
+            image_ = image
+            scale =  np.array([[1., 1., 1., 1.]])
+            offset = np.zeros([1, 4])
+        if boxes is not None:
+            boxes = boxes * scale + offset
+        
+        return image_, boxes, labels, scale, offset
+        
+
 class Resize(object):
     def __init__(self, size=[416, 416]):
         self.size = size
@@ -407,6 +437,7 @@ class SSDAugmentation(object):
         self.mean = mean
         self.size = size
         self.std = std
+        self.zeropad = ZeroPad()
         self.augment = Compose([
             ConvertFromInts(),
             ToAbsoluteCoords(),
@@ -420,4 +451,6 @@ class SSDAugmentation(object):
         ])
 
     def __call__(self, img, boxes, labels):
-        return self.augment(img, boxes, labels)
+        img, boxes, labels, scale, offset = self.zeropad(img, boxes, labels)
+        img, boxes, labels = self.augment(img, boxes, labels)
+        return img, boxes, labels, scale, offset

@@ -23,7 +23,7 @@ VOC_CLASSES = (  # always index 0
     'sheep', 'sofa', 'train', 'tvmonitor')
 
 # note: if you used our download scripts, this should be right
-VOC_ROOT = "/home/k303/object-detection/dataset/VOCdevkit/"
+VOC_ROOT = "/home/k545/object-detection/dataset/VOCdevkit/"
 
 class VOCAnnotationTransform(object):
     """Transforms a VOC annotation into a Tensor of bbox coords and label index
@@ -235,13 +235,15 @@ class VOCDetection(data.Dataset):
 
         # basic augmentation(SSDAugmentation or BaseTransform)
         if self.transform is not None:
-
+            # check targets
             if len(target) == 0:
                 target = np.zeros([1, 5])
             else:
                 target = np.array(target)
             
+            # augment
             img, boxes, labels, scale, offset = self.transform(img, target[:, :4], target[:, 4])
+            
             # to rgb
             img = img[:, :, (2, 1, 0)]
             target = np.hstack((boxes, np.expand_dims(labels, axis=1)))

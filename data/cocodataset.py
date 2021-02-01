@@ -32,7 +32,7 @@ coco_class_index = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 1
                     46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 67,
                     70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90]
 
-coco_root = '/home/k303/object-detection/dataset/COCO/'
+coco_root = '/home/k545/object-detection/dataset/COCO/'
 class COCODataset(Dataset):
     """
     COCO dataset class.
@@ -306,7 +306,9 @@ class COCODataset(Dataset):
             else:
                 target = np.array(target)
 
+            # augment
             img, boxes, labels, scale, offset = self.transform(img, target[:, :4], target[:, 4])
+
             # to rgb
             img = img[:, :, (2, 1, 0)]
             target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
@@ -364,7 +366,7 @@ if __name__ == "__main__":
 
     img_size = 640
     dataset = COCODataset(
-                data_dir='/home/k303/object-detection/dataset/COCO/',
+                data_dir=coco_root,
                 img_size=img_size,
                 transform=BaseTransform([img_size, img_size], (0, 0, 0)),
                 base_transform=BaseTransform([img_size, img_size], (0, 0, 0)),
