@@ -8,6 +8,16 @@ from data.cocodataset import *
 from data import *
 
 
+import json
+import tempfile
+
+from pycocotools.cocoeval import COCOeval
+from torch.autograd import Variable
+
+from data.cocodataset import *
+from data import *
+
+
 class COCOAPIEvaluator():
     """
     COCO AP Evaluation class.
@@ -50,6 +60,28 @@ class COCOAPIEvaluator():
         self.transform = transform
         self.device = device
 
+    def preprocess(self, img, height, width):
+        # zero padding
+        if height > width:
+            img_ = np.zeros([height, height, 3])
+            delta_w = height - width
+            left = delta_w // 2
+            img_[:, left:left+width, :] = img
+            offset = np.array([[ left / height, 0.,  left / height, 0.]])
+
+        elif height < width:
+            img_ = np.zeros([width, width, 3])
+            delta_h = width - height
+            top = delta_h // 2
+            img_[top:top+height, :, :] = img
+            offset = np.array([[0.,    top / width, 0.,    top / width]])
+        
+        else:
+            img_ = img
+            offset = np.zeros([1, 4])
+
+        return img_, offset
+
     def evaluate(self, model):
         """
         COCO average precision (AP) Evaluation. Iterate inference on the test dataset
@@ -74,26 +106,11 @@ class COCOAPIEvaluator():
             img, id_ = self.dataset.pull_image(index)  # load a batch
             height, width, _ = img.shape
 
-            # zero padding
-            if height > width:
-                img_ = np.zeros([height, height, 3])
-                delta_w = height - width
-                left = delta_w // 2
-                img_[:, left:left+width, :] = img
-                offset = np.array([[ left / height, 0.,  left / height, 0.]])
+            img, _, _, scale, offset = self.transform(img)
 
-            elif height < width:
-                img_ = np.zeros([width, width, 3])
-                delta_h = width - height
-                top = delta_h // 2
-                img_[top:top+height, :, :] = img
-                offset = np.array([[0.,    top / width, 0.,    top / width]])
-            
-            else:
-                img_ = img
-                offset = np.zeros([1, 4])
+            # img_, offset = self.preprocess(img, height, width)
                 
-            x = torch.from_numpy(self.transform(img_)[0][:, :, (2, 1, 0)]).permute(2, 0, 1)
+            x = torch.from_numpy(img[:, :, (2, 1, 0)]).permute(2, 0, 1)
             x = x.unsqueeze(0).to(self.device)
             
             id_ = int(id_)
@@ -140,7 +157,11 @@ class COCOAPIEvaluator():
             cocoEval.evaluate()
             cocoEval.accumulate()
             cocoEval.summarize()
-            return cocoEval.stats[0], cocoEval.stats[1]
+
+            ap50, ap50_95 = cocoEval.stats[0], cocoEval.stats[1]
+            print('ap50_95 : ', ap50_95)
+            print('ap50 : ', ap50)
+
+            return ap50, ap50_95
         else:
             return 0, 0
-

@@ -32,7 +32,7 @@ def parse_args():
                         type=str, help='The path to image files')
     parser.add_argument('--path_to_vid', default='data/demo/video/',
                         type=str, help='The path to video files')
-    parser.add_argument('--path_to_save', default='test_results/',
+    parser.add_argument('--path_to_save', default='det_results/',
                         type=str, help='The path to save the detection results video')
     parser.add_argument('--conf_thresh', default=0.1, type=float,
                         help='Confidence threshold')
@@ -45,29 +45,6 @@ def parse_args():
     
     return parser.parse_args()
                     
-
-def preprocess(img):
-    h, w, c = img.shape
-    # zero padding
-    if h > w:
-        img_ = np.zeros([h, h, 3])
-        delta_w = h - w
-        left = delta_w // 2
-        img_[:, left:left+w, :] = img
-        offset = np.array([[ left / h, 0.,  left / h, 0.]])
-
-    elif h < w:
-        img_ = np.zeros([w, w, 3])
-        delta_h = w - h
-        top = delta_h // 2
-        img_[top:top+h, :, :] = img
-        offset = np.array([[0.,    top / w, 0.,    top / w]])
-    
-    else:
-        img_ = img
-        offset = np.zeros([1, 4])
-
-    return img_, offset, h, w
 
 
 def vis(img, bbox_pred, scores, cls_inds, thresh, class_color, class_names=None):
@@ -103,10 +80,11 @@ def detect(args, net, device, transform, mode='image', path_to_img=None, path_to
 
             if ret:
                 # preprocess
-                frame_, offset, h, w = preprocess(frame)
+                h, w, _ = frame.shape
+                frame_, _, _, _, offset = transform(frame)
 
                 # to rgb
-                x = torch.from_numpy(transform(frame_)[0][:, :, (2, 1, 0)]).permute(2, 0, 1)
+                x = torch.from_numpy(frame_[:, :, (2, 1, 0)]).permute(2, 0, 1)
                 x = x.unsqueeze(0).to(device)
 
                 t0 = time.time()
@@ -131,17 +109,18 @@ def detect(args, net, device, transform, mode='image', path_to_img=None, path_to
 
     # ------------------------- Image ----------------------------
     elif mode == 'image':
-        save_path = 'test_results/Images/'
+        save_path = 'det_results/Images/'
         os.makedirs(save_path, exist_ok=True)
 
         for index, file in enumerate(os.listdir(path_to_img)):
             img = cv2.imread(path_to_img + '/' + file, cv2.IMREAD_COLOR)
 
             # preprocess
-            img_, offset, h, w = preprocess(img)
+            h, w, _ = img.shape
+            img_, _, _, _, offset = transform(img)
 
             # to rgb
-            x = torch.from_numpy(transform(img_)[0][:, :, (2, 1, 0)]).permute(2, 0, 1)
+            x = torch.from_numpy(img_[:, :, (2, 1, 0)]).permute(2, 0, 1)
             x = x.unsqueeze(0).to(device)
 
             t0 = time.time()
@@ -157,12 +136,12 @@ def detect(args, net, device, transform, mode='image', path_to_img=None, path_to
 
             img_processed = vis(img, bboxes, scores, cls_inds, thresh=thresh, class_color=class_color)
             cv2.imwrite(os.path.join(save_path, str(index).zfill(6) +'.jpg'), img_processed)
-            cv2.imshow('detection result', img_processed)
-            cv2.waitKey(0)
+            # cv2.imshow('detection result', img_processed)
+            # cv2.waitKey(0)
 
     # ------------------------- Video ---------------------------
     elif mode == 'video':
-        save_path = 'test_results/Videos/'
+        save_path = 'det_results/Videos/'
         video = cv2.VideoCapture(path_to_vid)
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         out = cv2.VideoWriter(os.path.join(save_path, 'output.avi'), fourcc, 30.0, (640, 360))        
@@ -174,10 +153,11 @@ def detect(args, net, device, transform, mode='image', path_to_img=None, path_to
                 # ------------------------- Detection ---------------------------
 
                 # preprocess
-                frame_, offset, h, w = preprocess(frame)
+                h, w, _ = frame.shape
+                frame_, _, _, _, offset = transform(frame)
 
                 # to rgb
-                x = torch.from_numpy(transform(frame_)[0][:, :, (2, 1, 0)]).permute(2, 0, 1)
+                x = torch.from_numpy(frame_[:, :, (2, 1, 0)]).permute(2, 0, 1)
                 x = x.unsqueeze(0).to(device)
 
                 t0 = time.time()

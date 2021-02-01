@@ -32,7 +32,7 @@ coco_class_index = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 1
                     46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 67,
                     70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90]
 
-coco_root = '/home/k545/object-detection/dataset/COCO/'
+coco_root = '/home/k303/object-detection/dataset/COCO/'
 class COCODataset(Dataset):
     """
     COCO dataset class.
@@ -288,10 +288,9 @@ class COCODataset(Dataset):
                 mosaic_tg[:, :4] /= (self.img_size * 2)
 
             # augment
-            mosaic_img, boxes, labels = self.base_transform(mosaic_img, mosaic_tg[:, :4], mosaic_tg[:, 4])
+            mosaic_img, boxes, labels, scale, offset = self.base_transform(mosaic_img, mosaic_tg[:, :4], mosaic_tg[:, 4])
             # to rgb
             mosaic_img = mosaic_img[:, :, (2, 1, 0)]
-            # img = img.transpose(2, 0, 1)
             mosaic_tg = np.hstack((boxes, np.expand_dims(labels, axis=1)))
 
             scale =  np.array([[1., 1., 1., 1.]])
@@ -299,43 +298,73 @@ class COCODataset(Dataset):
 
             return torch.from_numpy(mosaic_img).permute(2, 0, 1).float(), mosaic_tg, self.img_size, self.img_size, offset, scale
 
+        # basic augmentation(SSDAugmentation or BaseTransform)
         if self.transform is not None:
-            # preprocess
-            img_, scale, offset = self.preprocess(img, target, height, width)
-
+            # check targets
             if len(target) == 0:
                 target = np.zeros([1, 5])
             else:
                 target = np.array(target)
-                target[:, :4] = target[:, :4] * scale + offset
 
-            img, boxes, labels = self.transform(img_, target[:, :4], target[:, 4])
+            img, boxes, labels, scale, offset = self.transform(img, target[:, :4], target[:, 4])
             # to rgb
             img = img[:, :, (2, 1, 0)]
-            # img = img.transpose(2, 0, 1)
             target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
 
-            return torch.from_numpy(img).permute(2, 0, 1), target, height, width, offset, scale
+            return torch.from_numpy(img).permute(2, 0, 1).float(), target, height, width, offset, scale
 
 
 if __name__ == "__main__":
-    def base_transform(image, size, mean):
-        x = cv2.resize(image, (size[1], size[0])).astype(np.float32)
-        x -= mean
-        x = x.astype(np.float32)
-        return x
+    def base_transform(image, size, mean, boxes=None):
+        height, width, _ = image.shape
+        # normalize
+        image = image.astype(np.float32)
+        image -= mean
+        # zero padding
+        if height > width:
+            image_ = np.zeros([height, height, 3])
+            delta_w = height - width
+            left = delta_w // 2
+            image_[:, left:left+width, :] = image
+            offset = np.array([[ left / height, 0.,  left / height, 0.]])
+            scale =  np.array([[width / height, 1., width / height, 1.]])
+
+        elif height < width:
+            image_ = np.zeros([width, width, 3])
+            delta_h = width - height
+            top = delta_h // 2
+            image_[top:top+height, :, :] = image
+            offset = np.array([[0.,    top / width, 0.,    top / width]])
+            scale =  np.array([[1., height / width, 1., height / width]])
+
+        else:
+            print('No padding !!')
+            image_ = image
+            scale =  np.array([[1., 1., 1., 1.]])
+            offset = np.zeros([1, 4])
+
+        if boxes is not None:
+            boxes = boxes * scale + offset
+
+        # resize
+        image_ = cv2.resize(image_, (size[1], size[0])).astype(np.float32)
+        
+        return image_, boxes, scale, offset
+
 
     class BaseTransform:
-        def __init__(self, size, mean):
+        def __init__(self, size, mean=(0, 0, 0)):
             self.size = size
             self.mean = np.array(mean, dtype=np.float32)
 
         def __call__(self, image, boxes=None, labels=None):
-            return base_transform(image, self.size, self.mean), boxes, labels
+            image, boxes, scale, offset = base_transform(image, self.size, self.mean, boxes)
+
+            return image, boxes, labels, scale, offset
 
     img_size = 640
     dataset = COCODataset(
-                data_dir='/home/k545/object-detection/dataset/COCO/',
+                data_dir='/home/k303/object-detection/dataset/COCO/',
                 img_size=img_size,
                 transform=BaseTransform([img_size, img_size], (0, 0, 0)),
                 base_transform=BaseTransform([img_size, img_size], (0, 0, 0)),
@@ -345,7 +374,8 @@ if __name__ == "__main__":
     for i in range(1000):
         im, gt, h, w, offset, scale = dataset.pull_item(i)
         img = im.permute(1,2,0).numpy()[:, :, (2, 1, 0)].astype(np.uint8)
-        print(img.shape)
+        cv2.imwrite('-1.jpg', img)
+        img = cv2.imread('-1.jpg')
         for box in gt:
             xmin, ymin, xmax, ymax, _ = box
             xmin *= img_size

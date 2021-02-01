@@ -5,12 +5,6 @@ import os
 
 
 
-class Hardswish(nn.Module):
-    @staticmethod
-    def forward(x):
-        return x * F.relu6(x + 3.0) / 6.0
-
-
 class Conv(nn.Module):
     def __init__(self, c1, c2, k, s=1, p=0, d=1, g=1, leaky=True):
         super(Conv, self).__init__()
@@ -67,20 +61,6 @@ class UpSample(nn.Module):
     def forward(self, x):
         return torch.nn.functional.interpolate(x, size=self.size, scale_factor=self.scale_factor, 
                                                 mode=self.mode, align_corners=self.align_corner)
-
-
-# Copy from yolov5
-class Focus(nn.Module):
-    """
-        Focus module proposed by yolov5.
-    """
-    # Focus wh information into c-space
-    def __init__(self, c1, c2, k=1, p=0, s=1, g=1, act=True):  # ch_in, ch_out, kernel, stride, padding, groups
-        super(Focus, self).__init__()
-        self.conv = Conv(c1 * 4, c2, k=k, s=s, p=p, g=g, act=act)
-
-    def forward(self, x):  # x(B, C, H, W) -> y(B, 4C, H/2, W/2)
-        return self.conv(torch.cat([x[..., ::2, ::2], x[..., 1::2, ::2], x[..., ::2, 1::2], x[..., 1::2, 1::2]], 1))
 
 
 # Copy from yolov5

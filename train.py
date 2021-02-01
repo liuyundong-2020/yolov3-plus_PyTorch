@@ -296,7 +296,7 @@ def train():
             
             # make train label
             targets = [label.tolist() for label in targets]
-            vis_data(images, targets, train_size)
+            # vis_data(images, targets, train_size)
             targets = tools.multi_gt_creator(train_size, yolo_net.stride, targets, anchor_size=anchor_size)
             targets = torch.tensor(targets).float().to(device)
 

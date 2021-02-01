@@ -81,11 +81,11 @@ COCO eval:
 <table><tbody>
 <tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> size </td><td bgcolor=white> data </td><td bgcolor=white> AP </td><td bgcolor=white> AP50 </td><td bgcolor=white> AP75 </td><td bgcolor=white> AP-S </td><td bgcolor=white> AP-M </td><td bgcolor=white> AP-L </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim</th><td bgcolor=white> 320 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim</th><td bgcolor=white> 320 </td><td bgcolor=white> COCO eval </td><td bgcolor=white> 23.64 </td><td bgcolor=white> 42.35 </td><td bgcolor=white> 23.0 </td><td bgcolor=white> 6.5 </td><td bgcolor=white> 24.6 </td><td bgcolor=white> 38.6 </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim</th><td bgcolor=white> 416 </td><td bgcolor=white> COCO eval </td><td bgcolor=white> 26.08 </td><td bgcolor=white> 45.65 </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim</th><td bgcolor=white> 416 </td><td bgcolor=white> COCO eval </td><td bgcolor=white> 26.08 </td><td bgcolor=white> 45.65 </td><td bgcolor=white> 26.2 </td><td bgcolor=white> 9.6 </td><td bgcolor=white> 27.1 </td><td bgcolor=white> 39.7 </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim</th><td bgcolor=white> 608 </td><td bgcolor=white> COCO eval </td><td bgcolor=white> 26.85 </td><td bgcolor=white> 47.58 </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim</th><td bgcolor=white> 608 </td><td bgcolor=white> COCO eval </td><td bgcolor=white> 26.85 </td><td bgcolor=white> 47.58 </td><td bgcolor=white> 26.7 </td><td bgcolor=white> 13.4 </td><td bgcolor=white> 30.0 </td><td bgcolor=white> 36.0 </td></tr>
 
 <tr><th align="left" bgcolor=#f8f8f8>-</th><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td></tr>
 
