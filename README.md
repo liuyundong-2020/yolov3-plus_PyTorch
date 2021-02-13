@@ -89,11 +89,11 @@ COCO eval:
 
 <tr><th align="left" bgcolor=#f8f8f8>-</th><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td><td bgcolor=white>-</td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim-csp</th><td bgcolor=white> 320 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim-csp</th><td bgcolor=white> 320 </td><td bgcolor=white> COCO eval </td><td bgcolor=white> 23.19 </td><td bgcolor=white> 41.61 </td><td bgcolor=white> 22.5 </td><td bgcolor=white> 6.0 </td><td bgcolor=white> 23.8 </td><td bgcolor=white> 39.2 </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim-csp</th><td bgcolor=white> 416 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim-csp</th><td bgcolor=white> 416 </td><td bgcolor=white> COCO eval </td><td bgcolor=white> 25.67 </td><td bgcolor=white> 45.24 </td><td bgcolor=white> 25.4 </td><td bgcolor=white> 9.5 </td><td bgcolor=white> 26.7 </td><td bgcolor=white> 40.0 </td></tr>
 
-<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim-csp</th><td bgcolor=white> 608 </td><td bgcolor=white> COCO eval </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td><td bgcolor=white>  </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> YOLOv3Slim-csp</th><td bgcolor=white> 608 </td><td bgcolor=white> COCO eval </td><td bgcolor=white> 27.21 </td><td bgcolor=white> 47.89 </td><td bgcolor=white> 27.2 </td><td bgcolor=white> 12.3 </td><td bgcolor=white> 30.5 </td><td bgcolor=white> 37.5 </td></tr>
 </table></tbody>
 
 I am try to finish this project as soon as possible, but I have no much GPUs to train them. 
