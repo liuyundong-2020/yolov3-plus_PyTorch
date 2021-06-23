@@ -1,6 +1,8 @@
 """VOC Dataset Classes
+
 Original author: Francisco Massa
 https://github.com/fmassa/vision/blob/voc_dataset/torchvision/datasets/voc.py
+
 Updated by: Ellis Brown, Max deGroot
 """
 import os.path as osp
@@ -10,6 +12,7 @@ import torch.utils.data as data
 import cv2
 import numpy as np
 import random
+
 if sys.version_info[0] == 2:
     import xml.etree.cElementTree as ET
 else:
@@ -22,12 +25,13 @@ VOC_CLASSES = (  # always index 0
     'motorbike', 'person', 'pottedplant',
     'sheep', 'sofa', 'train', 'tvmonitor')
 
-# note: if you used our download scripts, this should be right
-VOC_ROOT = "/home/k545/object-detection/dataset/VOCdevkit/"
+VOC_ROOT = "/data/Dataset/VOC/VOCdevkit/"
+
 
 class VOCAnnotationTransform(object):
     """Transforms a VOC annotation into a Tensor of bbox coords and label index
     Initilized with a dictionary lookup of classnames to indexes
+
     Arguments:
         class_to_ind (dict, optional): dictionary lookup of classnames -> indexes
             (default: alphabetic indexing of VOC's 20 classes)
@@ -67,15 +71,17 @@ class VOCAnnotationTransform(object):
                 bndbox.append(cur_pt)
             label_idx = self.class_to_ind[name]
             bndbox.append(label_idx)
-            res += [bndbox]  # [xmin, ymin, xmax, ymax, label_ind]
+            res += [bndbox]  # [x1, y1, x2, y2, label_ind]
             # img_id = target.find('filename').text[:-4]
 
-        return res  # [[xmin, ymin, xmax, ymax, label_ind], ... ]
+        return res  # [[x1, y1, x2, y2, label_ind], ... ]
 
 
 class VOCDetection(data.Dataset):
     """VOC Detection Dataset Object
+
     input is image, target is annotation
+
     Arguments:
         root (string): filepath to VOCdevkit folder.
         image_set (string): imageset to use (eg. 'train', 'val', 'test')
@@ -88,35 +94,43 @@ class VOCDetection(data.Dataset):
             (default: 'VOC2007')
     """
 
-    def __init__(self, root, img_size,
+    def __init__(self, 
+                 root,
+                 img_size=None,
                  image_sets=[('2007', 'trainval'), ('2012', 'trainval')],
                  transform=None, 
                  base_transform=None,
                  target_transform=VOCAnnotationTransform(),
-                 dataset_name='VOC0712', mosaic=False):
+                 mosaic=False,
+                 dataset_name='VOC0712'
+                 ):
         self.root = root
         self.img_size = img_size
+
         self.image_set = image_sets
         self.transform = transform
         self.base_transform = base_transform
         self.target_transform = target_transform
+        self.mosaic = mosaic
         self.name = dataset_name
         self._annopath = osp.join('%s', 'Annotations', '%s.xml')
         self._imgpath = osp.join('%s', 'JPEGImages', '%s.jpg')
         self.ids = list()
-        self.mosaic = mosaic
         for (year, name) in image_sets:
             rootpath = osp.join(self.root, 'VOC' + year)
             for line in open(osp.join(rootpath, 'ImageSets', 'Main', name + '.txt')):
                 self.ids.append((rootpath, line.strip()))
 
+
     def __getitem__(self, index):
-        im, gt, h, w, offset, scale = self.pull_item(index)
+        im, gt, h, w, scale, offset = self.pull_item(index)
 
         return im, gt
 
+
     def __len__(self):
         return len(self.ids)
+
 
     def pull_item(self, index):
         img_id = self.ids[index]
@@ -149,22 +163,23 @@ class VOCDetection(data.Dataset):
             mosaic_img = np.zeros([self.img_size*2, self.img_size*2, img.shape[2]], dtype=np.uint8)
             # mosaic center
             yc, xc = [int(random.uniform(-x, 2*self.img_size + x)) for x in [-self.img_size // 2, -self.img_size // 2]]
+            # yc = xc = self.img_size
 
             mosaic_tg = []
             for i in range(4):
                 img_i, target_i = img_lists[i], tg_lists[i]
                 h0, w0, _ = img_i.shape
 
-                # resize image to img_size
+                # resize
                 r = self.img_size / max(h0, w0)
-                if r != 1:  # always resize down, only resize up if training with augmentation
+                if r != 1: 
                     img_i = cv2.resize(img_i, (int(w0 * r), int(h0 * r)))
                 h, w, _ = img_i.shape
 
                 # place img in img4
                 if i == 0:  # top left
-                    x1a, y1a, x2a, y2a = max(xc - w, 0), max(yc - h, 0), xc, yc  # xmin, ymin, xmax, ymax (large image)
-                    x1b, y1b, x2b, y2b = w - (x2a - x1a), h - (y2a - y1a), w, h  # xmin, ymin, xmax, ymax (small image)
+                    x1a, y1a, x2a, y2a = max(xc - w, 0), max(yc - h, 0), xc, yc  # x1, y1, x2, y2 (large image)
+                    x1b, y1b, x2b, y2b = w - (x2a - x1a), h - (y2a - y1a), w, h  # x1, y1, x2, y2 (small image)
                 elif i == 1:  # top right
                     x1a, y1a, x2a, y2a = xc, max(yc - h, 0), min(xc + w, self.img_size * 2), yc
                     x1b, y1b, x2b, y2b = 0, h - (y2a - y1a), min(w, x2a - x1a), h
@@ -203,32 +218,35 @@ class VOCDetection(data.Dataset):
             # augment
             mosaic_img, boxes, labels, scale, offset = self.base_transform(mosaic_img, mosaic_tg[:, :4], mosaic_tg[:, 4])
             # to rgb
-            mosaic_img = mosaic_img[:, :, (2, 1, 0)]
+            mosaic_img = torch.from_numpy(mosaic_img[:, :, (2, 1, 0)]).permute(2, 0, 1).float()
             mosaic_tg = np.hstack((boxes, np.expand_dims(labels, axis=1)))
 
-            return torch.from_numpy(mosaic_img).permute(2, 0, 1).float(), mosaic_tg, self.img_size, self.img_size, offset, scale
+            return mosaic_img, mosaic_tg, self.img_size, self.img_size, scale, offset
 
-        # basic augmentation(SSDAugmentation or BaseTransform)
-        if self.transform is not None:
-            # check targets
+        # basic augmentation
+        else:
+            # check target
             if len(target) == 0:
                 target = np.zeros([1, 5])
             else:
                 target = np.array(target)
-            
-            # augment
+
             img, boxes, labels, scale, offset = self.transform(img, target[:, :4], target[:, 4])
-            
             # to rgb
-            img = img[:, :, (2, 1, 0)]
+            img = torch.from_numpy(img[:, :, (2, 1, 0)]).permute(2, 0, 1).float()
+            # img = img.transpose(2, 0, 1)
             target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
-        
-        return torch.from_numpy(img).permute(2, 0, 1).float(), target, height, width, offset, scale
+
+
+        return img, target, height, width, scale, offset
+
 
     def pull_image(self, index):
         '''Returns the original image object at index in PIL form
+
         Note: not using self.__getitem__(), as any transformations passed in
         could mess up this functionality.
+
         Argument:
             index (int): index of img to show
         Return:
@@ -237,10 +255,13 @@ class VOCDetection(data.Dataset):
         img_id = self.ids[index]
         return cv2.imread(self._imgpath % img_id, cv2.IMREAD_COLOR), img_id
 
+
     def pull_anno(self, index):
         '''Returns the original annotation of image at index
+
         Note: not using self.__getitem__(), as any transformations passed in
         could mess up this functionality.
+
         Argument:
             index (int): index of img to get annotation of
         Return:
@@ -252,83 +273,89 @@ class VOCDetection(data.Dataset):
         gt = self.target_transform(anno, 1, 1)
         return img_id[1], gt
 
-    def pull_tensor(self, index):
-        '''Returns the original image at an index in tensor form
-        Note: not using self.__getitem__(), as any transformations passed in
-        could mess up this functionality.
-        Argument:
-            index (int): index of img to show
-        Return:
-            tensorized version of img, squeezed
-        '''
-        return torch.Tensor(self.pull_image(index)).unsqueeze_(0)
-
 
 if __name__ == "__main__":
-    def base_transform(image, size, mean, boxes=None):
-        height, width, _ = image.shape
-        # normalize
-        image = image.astype(np.float32)
-        image -= mean
-        # zero padding
-        if height > width:
-            image_ = np.zeros([height, height, 3])
-            delta_w = height - width
-            left = delta_w // 2
-            image_[:, left:left+width, :] = image
-            offset = np.array([[ left / height, 0.,  left / height, 0.]])
-            scale =  np.array([[width / height, 1., width / height, 1.]])
+    def base_transform(img, size, mean, std, boxes=None):
+        h0, w0, _ = img.shape
 
-        elif height < width:
-            image_ = np.zeros([width, width, 3])
-            delta_h = width - height
-            top = delta_h // 2
-            image_[top:top+height, :, :] = image
-            offset = np.array([[0.,    top / width, 0.,    top / width]])
-            scale =  np.array([[1., height / width, 1., height / width]])
+        # zero padding
+        if h0 > w0:
+            r = w0 / h0
+            img = cv2.resize(img, (int(r * size), size)).astype(np.float32)
+            # normalize
+            # img /= 255.
+            # img -= mean
+            # img /= std
+            h, w, _ = img.shape
+            img_ = np.zeros([h, h, 3])
+            dw = h - w
+            left = dw // 2
+            img_[:, left:left+w, :] = img
+            offset = np.array([[left / h, 0.,  left / h, 0.]])
+            scale = np.array([w / h, 1., w / h, 1.])
+
+        elif h0 < w0:
+            r = h0 / w0
+            img = cv2.resize(img, (size, int(r * size))).astype(np.float32)
+            # normalize
+            # img /= 255.
+            # img -= mean
+            # img /= std
+            h, w, _ = img.shape
+            img_ = np.zeros([w, w, 3])
+            dh = w - h
+            top = dh // 2
+            img_[top:top+h, :, :] = img
+            offset = np.array([[0., top / w, 0., top / w]])
+            scale = np.array([1., h / w, 1., h / w])
 
         else:
-            print('No padding !!')
-            image_ = image
-            scale =  np.array([[1., 1., 1., 1.]])
+            img = cv2.resize(img, (size, size)).astype(np.float32)
+            # normalize
+            # img /= 255.
+            # img -= mean
+            # img /= std
+            img_ = img
             offset = np.zeros([1, 4])
+            scale = 1.0
 
         if boxes is not None:
-            boxes = boxes * scale + offset
-
-        # resize
-        image_ = cv2.resize(image_, (size[1], size[0])).astype(np.float32)
+            boxes_ = boxes * scale + offset
         
-        return image_, boxes, scale, offset
+        return img_, boxes_, scale, offset
 
 
     class BaseTransform:
-        def __init__(self, size, mean=(0, 0, 0)):
+        def __init__(self, size, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229)):
             self.size = size
             self.mean = np.array(mean, dtype=np.float32)
+            self.std = np.array(std, dtype=np.float32)
 
-        def __call__(self, image, boxes=None, labels=None):
-            image, boxes, scale, offset = base_transform(image, self.size, self.mean, boxes)
+        def __call__(self, img, boxes=None, labels=None):
+            img, boxes, scale, offset = base_transform(img, self.size, self.mean, self.std, boxes)
 
-            return image, boxes, labels, scale, offset
+            return img, boxes, labels, scale, offset
 
     img_size = 640
     # dataset
-    dataset = VOCDetection(VOC_ROOT, img_size, [('2007', 'trainval')],
-                            transform=BaseTransform([img_size, img_size]),
-                            base_transform=BaseTransform([img_size, img_size]),
+    dataset = VOCDetection(root=VOC_ROOT, 
+                           img_size=img_size,
+                           image_sets=[('2007', 'trainval')],
+                           transform=BaseTransform(img_size, (0, 0, 0), (1, 1, 1)),
+                           base_transform=BaseTransform(img_size, (0, 0, 0), (1, 1, 1)),
+                           target_transform=VOCAnnotationTransform(), 
                             mosaic=True)
     for i in range(1000):
-        im, gt, h, w, _, _ = dataset.pull_item(i)
+        im, gt, h, w, scale, offset = dataset.pull_item(i)
         img = im.permute(1,2,0).numpy()[:, :, (2, 1, 0)].astype(np.uint8)
-        cv2.imwrite('-1.jpg', img)
-        img = cv2.imread('-1.jpg')
+        # cv2.imwrite('-1.jpg', img)
+        # img = cv2.imread('-1.jpg')
         for box in gt:
-            xmin, ymin, xmax, ymax, _ = box
-            xmin *= img_size
-            ymin *= img_size
-            xmax *= img_size
-            ymax *= img_size
-            img = cv2.rectangle(img, (int(xmin), int(ymin)), (int(xmax), int(ymax)), (0,0,255), 2)
+            x1, y1, x2, y2, _ = box
+            x1 *= img_size
+            y1 *= img_size
+            x2 *= img_size
+            y2 *= img_size
+            img = cv2.rectangle(img, (int(x1), int(y1)), (int(x2), int(y2)), (0,0,255), 2)
         cv2.imshow('gt', img)
         cv2.waitKey(0)

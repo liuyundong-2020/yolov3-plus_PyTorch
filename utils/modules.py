@@ -2,52 +2,32 @@ import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import os
+import math
+from copy import deepcopy
 
+
+def is_parallel(model):
+    # Returns True if model is of type DP or DDP
+    return type(model) in (nn.parallel.DataParallel, nn.parallel.DistributedDataParallel)
 
 
 class Conv(nn.Module):
-    def __init__(self, c1, c2, k, s=1, p=0, d=1, g=1, leaky=True):
+    def __init__(self, in_ch, out_ch, k=1, p=0, s=1, d=1, g=1, act=True, bias=False):
         super(Conv, self).__init__()
-        self.convs = nn.Sequential(
-            nn.Conv2d(c1, c2, k, stride=s, padding=p, dilation=d, groups=g),
-            nn.BatchNorm2d(c2),
-            nn.LeakyReLU(0.1, inplace=True) if leaky else nn.Identity()
-        )
+        if act:
+            self.convs = nn.Sequential(
+                nn.Conv2d(in_ch, out_ch, k, stride=s, padding=p, dilation=d, groups=g, bias=bias),
+                nn.BatchNorm2d(out_ch),
+                nn.LeakyReLU(0.1, inplace=True)
+            )
+        else:
+            self.convs = nn.Sequential(
+                nn.Conv2d(in_ch, out_ch, k, stride=s, padding=p, dilation=d, groups=g, bias=bias),
+                nn.BatchNorm2d(out_ch)
+            )
 
     def forward(self, x):
         return self.convs(x)
-
-
-class SAM(nn.Module):
-    """ Parallel CBAM """
-    def __init__(self, in_ch):
-        super(SAM, self).__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(in_ch, in_ch, 1),
-            nn.Sigmoid()           
-        )
-
-    def forward(self, x):
-        """ Spatial Attention Module """
-        x_attention = self.conv(x)
-
-        return x * x_attention
-
-
-class SPP(nn.Module):
-    """
-        Spatial Pyramid Pooling
-    """
-    def __init__(self):
-        super(SPP, self).__init__()
-
-    def forward(self, x):
-        x_1 = torch.nn.functional.max_pool2d(x, 5, stride=1, padding=2)
-        x_2 = torch.nn.functional.max_pool2d(x, 9, stride=1, padding=4)
-        x_3 = torch.nn.functional.max_pool2d(x, 13, stride=1, padding=6)
-        x = torch.cat([x, x_1, x_2, x_3], dim=1)
-
-        return x
 
 
 class UpSample(nn.Module):
@@ -59,8 +39,33 @@ class UpSample(nn.Module):
         self.align_corner = align_corner
 
     def forward(self, x):
-        return torch.nn.functional.interpolate(x, size=self.size, scale_factor=self.scale_factor, 
-                                                mode=self.mode, align_corners=self.align_corner)
+        return torch.nn.functional.interpolate(input=x, 
+                                               size=self.size, 
+                                               scale_factor=self.scale_factor, 
+                                               mode=self.mode, 
+                                               align_corners=self.align_corner
+                                               )
+
+
+class SPP(nn.Module):
+    """
+        Spatial Pyramid Pooling
+    """
+    def __init__(self, c1, c2, e=0.5):
+        super(SPP, self).__init__()
+        c_ = int(c1 * e)
+        self.cv1 = Conv(c1, c_, k=1)
+        self.cv2 = Conv(c_*4, c2, k=1)
+
+    def forward(self, x):
+        x = self.cv1(x)
+        x_1 = torch.nn.functional.max_pool2d(x, 5, stride=1, padding=2)
+        x_2 = torch.nn.functional.max_pool2d(x, 9, stride=1, padding=4)
+        x_3 = torch.nn.functional.max_pool2d(x, 13, stride=1, padding=6)
+        x = torch.cat([x, x_1, x_2, x_3], dim=1)
+        x = self.cv2(x)
+
+        return x
 
 
 # Copy from yolov5
@@ -95,3 +100,25 @@ class BottleneckCSP(nn.Module):
         y1 = self.cv3(self.m(self.cv1(x)))
         y2 = self.cv2(x)
         return self.cv4(self.act(self.bn(torch.cat((y1, y2), dim=1))))
+
+
+class ModelEMA(object):
+    def __init__(self, model, decay=0.9999, updates=0):
+        # create EMA
+        self.ema = deepcopy(model.module if is_parallel(model) else model).eval()  # FP32 EMA
+        self.updates = updates
+        self.decay = lambda x: decay * (1 - math.exp(-x / 2000.))
+        for p in self.ema.parameters():
+            p.requires_grad_(False)
+
+    def update(self, model):
+        # Update EMA parameters
+        with torch.no_grad():
+            self.updates += 1
+            d = self.decay(self.updates)
+
+            msd = model.module.state_dict() if is_parallel(model) else model.state_dict()  # model state_dict
+            for k, v in self.ema.state_dict().items():
+                if v.dtype.is_floating_point:
+                    v *= d
+                    v += (1. - d) * msd[k].detach()

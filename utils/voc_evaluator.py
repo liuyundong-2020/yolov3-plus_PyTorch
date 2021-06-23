@@ -41,7 +41,7 @@ class VOCAPIEvaluator():
         self.output_dir = self.get_output_dir('voc_eval/', self.set_type)
 
         # dataset
-        self.dataset = VOCDetection(root=data_root, img_size=None,
+        self.dataset = VOCDetection(root=data_root, 
                                     image_sets=[('2007', set_type)],
                                     transform=transform
                                     )
@@ -59,19 +59,19 @@ class VOCAPIEvaluator():
         det_file = os.path.join(self.output_dir, 'detections.pkl')
 
         for i in range(num_images):
-            im, gt, h, w, offset, scale = self.dataset.pull_item(i)
+            im, gt, h, w, scale, offset = self.dataset.pull_item(i)
+            size = np.array([[w, h, w, h]])
 
             x = Variable(im.unsqueeze(0)).to(self.device)
             t0 = time.time()
             # forward
             bboxes, scores, cls_inds = net(x)
             detect_time = time.time() - t0
-            # scale each detection back up to the image
-            max_line = max(h, w)
-            # map the boxes to input image with zero padding
-            bboxes *= max_line
-            # map to the image without zero padding
-            bboxes -= (offset * max_line)
+            # map the boxes to original image
+            bboxes -= offset
+            bboxes /= scale
+            
+            bboxes *= size
 
             for j in range(len(self.labelmap)):
                 inds = np.where(cls_inds == j)[0]

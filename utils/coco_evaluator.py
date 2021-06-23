@@ -59,28 +59,8 @@ class COCOAPIEvaluator():
         self.img_size = img_size
         self.transform = transform
         self.device = device
-
-    def preprocess(self, img, height, width):
-        # zero padding
-        if height > width:
-            img_ = np.zeros([height, height, 3])
-            delta_w = height - width
-            left = delta_w // 2
-            img_[:, left:left+width, :] = img
-            offset = np.array([[ left / height, 0.,  left / height, 0.]])
-
-        elif height < width:
-            img_ = np.zeros([width, width, 3])
-            delta_h = width - height
-            top = delta_h // 2
-            img_[top:top+height, :, :] = img
-            offset = np.array([[0.,    top / width, 0.,    top / width]])
-        
-        else:
-            img_ = img
-            offset = np.zeros([1, 4])
-
-        return img_, offset
+        self.ap50_95 = 0.
+        self.ap50 = 0.
 
     def evaluate(self, model):
         """
@@ -103,27 +83,26 @@ class COCOAPIEvaluator():
             if index % 500 == 0:
                 print('[Eval: %d / %d]'%(index, num_images))
 
-            img, id_ = self.dataset.pull_image(index)  # load a batch
-            height, width, _ = img.shape
+            # load an image
+            img, id_ = self.dataset.pull_image(index)
+            h, w, _ = img.shape
+            size = np.array([[w, h, w, h]])
 
+            # preprocess
             img, _, _, scale, offset = self.transform(img)
-
-            # img_, offset = self.preprocess(img, height, width)
-                
             x = torch.from_numpy(img[:, :, (2, 1, 0)]).permute(2, 0, 1)
             x = x.unsqueeze(0).to(self.device)
             
             id_ = int(id_)
             ids.append(id_)
+            # inference
             with torch.no_grad():
                 outputs = model(x)
                 bboxes, scores, cls_inds = outputs
-                # scale each detection back up to the image
-                max_line = max(height, width)
-                # map the boxes to input image with zero padding
-                bboxes *= max_line
-                # map to the image without zero padding
-                bboxes -= (offset * max_line)
+                # map the boxes to original image
+                bboxes -= offset
+                bboxes /= scale
+                bboxes *= size
 
             for i, box in enumerate(bboxes):
                 x1 = float(box[0])
@@ -146,8 +125,8 @@ class COCOAPIEvaluator():
             cocoGt = self.dataset.coco
             # workaround: temporarily write data to json file because pycocotools can't process dict in py36.
             if self.testset:
-                json.dump(data_dict, open('yolov2_2017.json', 'w'))
-                cocoDt = cocoGt.loadRes('yolov2_2017.json')
+                json.dump(data_dict, open('det_coco_2017.json', 'w'))
+                cocoDt = cocoGt.loadRes('det_coco_2017.json')
             else:
                 _, tmp = tempfile.mkstemp()
                 json.dump(data_dict, open(tmp, 'w'))
@@ -158,10 +137,12 @@ class COCOAPIEvaluator():
             cocoEval.accumulate()
             cocoEval.summarize()
 
-            ap50, ap50_95 = cocoEval.stats[0], cocoEval.stats[1]
+            ap50_95, ap50 = cocoEval.stats[0], cocoEval.stats[1]
             print('ap50_95 : ', ap50_95)
             print('ap50 : ', ap50)
+            self.ap50_95 = ap50_95
+            self.ap50 = ap50
 
             return ap50, ap50_95
         else:
-            return 0, 0
+            return -1, -1

@@ -5,11 +5,7 @@ import random
 import torch
 from torch.utils.data import Dataset
 import cv2
-try:
-    from pycocotools.coco import COCO
-except:
-    print('It seems that you do not install cocoapi ...')
-    pass
+from pycocotools.coco import COCO
 
 
 coco_class_labels = ('background',
@@ -32,16 +28,23 @@ coco_class_index = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 1
                     46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 67,
                     70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90]
 
-coco_root = '/home/k545/object-detection/dataset/COCO/'
+coco_root = '/data/Dataset/COCO/'
+
+
 class COCODataset(Dataset):
     """
     COCO dataset class.
     """
-    def __init__(self, data_dir='COCO', json_file='instances_train2017.json',
-                 name='train2017', img_size=416,
+    def __init__(self, 
+                 data_dir='COCO', 
+                 img_size=416,
                  transform=None, 
                  base_transform=None,
-                 min_size=1, debug=False, mosaic=False):
+                 json_file='instances_train2017.json',
+                 name='train2017', 
+                 min_size=1, 
+                 debug=False,
+                 mosaic=False):
         """
         COCO dataset initialization. Annotation data are read into memory by COCO API.
         Args:
@@ -68,8 +71,10 @@ class COCODataset(Dataset):
         self.base_transform = base_transform
         self.mosaic = mosaic
 
+
     def __len__(self):
         return len(self.ids)
+
 
     def pull_image(self, index):
         id_ = self.ids[index]
@@ -82,17 +87,8 @@ class COCODataset(Dataset):
                                     '{:012}'.format(id_) + '.jpg')
             img = cv2.imread(img_file)
 
-        elif self.json_file == 'image_info_test-dev2017.json' and img is None:
-            img_file = os.path.join(self.data_dir, 'test2017',
-                                    '{:012}'.format(id_) + '.jpg')
-            img = cv2.imread(img_file)
-
-        elif self.json_file == 'image_info_test2017.json' and img is None:
-            img_file = os.path.join(self.data_dir, 'test2017',
-                                    '{:012}'.format(id_) + '.jpg')
-            img = cv2.imread(img_file)
-
         return img, id_
+
 
     def pull_anno(self, index):
         id_ = self.ids[index]
@@ -117,10 +113,12 @@ class COCODataset(Dataset):
                 print('No bbox !!')
         return target
 
+
     def __getitem__(self, index):
-        im, gt, h, w, offset, scale = self.pull_item(index)
+        im, gt, h, w, scale, offset = self.pull_item(index)
 
         return im, gt
+
 
     def pull_item(self, index):
         id_ = self.ids[index]
@@ -146,21 +144,26 @@ class COCODataset(Dataset):
         # start here :
         target = []
         for anno in annotations:
-            x1 = np.max((0, anno['bbox'][0]))
-            y1 = np.max((0, anno['bbox'][1]))
-            x2 = np.min((width - 1, x1 + np.max((0, anno['bbox'][2] - 1))))
-            y2 = np.min((height - 1, y1 + np.max((0, anno['bbox'][3] - 1))))
-            if anno['area'] > 0 and x2 >= x1 and y2 >= y1:
-                label_ind = anno['category_id']
-                cls_id = self.class_ids.index(label_ind)
-                x1 /= width
-                y1 /= height
-                x2 /= width
-                y2 /= height
+            if 'bbox' in anno and anno['area'] > 0:   
+                xmin = np.max((0, anno['bbox'][0]))
+                ymin = np.max((0, anno['bbox'][1]))
+                xmax = np.min((width - 1, xmin + np.max((0, anno['bbox'][2] - 1))))
+                ymax = np.min((height - 1, ymin + np.max((0, anno['bbox'][3] - 1))))
+                # xmin, ymin, w, h = anno['bbox']
+                # xmax = xmin + w
+                # ymax = ymin + h
+                if xmax > xmin and ymax > ymin:
+                    label_ind = anno['category_id']
+                    cls_id = self.class_ids.index(label_ind)
+                    xmin /= width
+                    ymin /= height
+                    xmax /= width
+                    ymax /= height
 
-                target.append([x1, y1, x2, y2, cls_id])  # [xmin, ymin, xmax, ymax, label_ind]
+                    target.append([xmin, ymin, xmax, ymax, cls_id])  # [xmin, ymin, xmax, ymax, label_ind]
+            else:
+                print('No bbox !!!')
         # end here .
-
         # mosaic augmentation
         if self.mosaic and np.random.randint(2):
             ids_list_ = self.ids[:index] + self.ids[index+1:]
@@ -211,15 +214,16 @@ class COCODataset(Dataset):
             mosaic_img = np.zeros([self.img_size*2, self.img_size*2, img.shape[2]], dtype=np.uint8)
             # mosaic center
             yc, xc = [int(random.uniform(-x, 2*self.img_size + x)) for x in [-self.img_size // 2, -self.img_size // 2]]
+            # yc = xc = self.img_size
 
             mosaic_tg = []
             for i in range(4):
                 img_i, target_i = img_lists[i], tg_lists[i]
                 h0, w0, _ = img_i.shape
 
-                # resize image to img_size
+                # resize
                 r = self.img_size / max(h0, w0)
-                if r != 1:  # always resize down, only resize up if training with augmentation
+                if r != 1: 
                     img_i = cv2.resize(img_i, (int(w0 * r), int(h0 * r)))
                 h, w, _ = img_i.shape
 
@@ -265,101 +269,111 @@ class COCODataset(Dataset):
             # augment
             mosaic_img, boxes, labels, scale, offset = self.base_transform(mosaic_img, mosaic_tg[:, :4], mosaic_tg[:, 4])
             # to rgb
-            mosaic_img = mosaic_img[:, :, (2, 1, 0)]
+            mosaic_img = torch.from_numpy(mosaic_img[:, :, (2, 1, 0)]).permute(2, 0, 1).float()
             mosaic_tg = np.hstack((boxes, np.expand_dims(labels, axis=1)))
 
-            scale =  np.array([[1., 1., 1., 1.]])
-            offset = np.zeros([1, 4])
+            return mosaic_img, mosaic_tg, self.img_size, self.img_size, scale, offset
 
-            return torch.from_numpy(mosaic_img).permute(2, 0, 1).float(), mosaic_tg, self.img_size, self.img_size, offset, scale
-
-        # basic augmentation(SSDAugmentation or BaseTransform)
-        if self.transform is not None:
-            # check targets
+        # basic augmentation
+        else:
             if len(target) == 0:
                 target = np.zeros([1, 5])
             else:
                 target = np.array(target)
 
-            # augment
             img, boxes, labels, scale, offset = self.transform(img, target[:, :4], target[:, 4])
-
             # to rgb
-            img = img[:, :, (2, 1, 0)]
+            img = torch.from_numpy(img[:, :, (2, 1, 0)]).permute(2, 0, 1).float()
+            # img = img.transpose(2, 0, 1)
             target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
 
-            return torch.from_numpy(img).permute(2, 0, 1).float(), target, height, width, offset, scale
+            return img, target, height, width, scale, offset
 
 
 if __name__ == "__main__":
-    def base_transform(image, size, mean, boxes=None):
-        height, width, _ = image.shape
-        # normalize
-        image = image.astype(np.float32)
-        image -= mean
-        # zero padding
-        if height > width:
-            image_ = np.zeros([height, height, 3])
-            delta_w = height - width
-            left = delta_w // 2
-            image_[:, left:left+width, :] = image
-            offset = np.array([[ left / height, 0.,  left / height, 0.]])
-            scale =  np.array([[width / height, 1., width / height, 1.]])
+    def base_transform(img, size, mean, std, boxes=None):
+        h0, w0, _ = img.shape
 
-        elif height < width:
-            image_ = np.zeros([width, width, 3])
-            delta_h = width - height
-            top = delta_h // 2
-            image_[top:top+height, :, :] = image
-            offset = np.array([[0.,    top / width, 0.,    top / width]])
-            scale =  np.array([[1., height / width, 1., height / width]])
+        # zero padding
+        if h0 > w0:
+            r = w0 / h0
+            img = cv2.resize(img, (int(r * size), size)).astype(np.float32)
+            # normalize
+            # img /= 255.
+            # img -= mean
+            # img /= std
+            h, w, _ = img.shape
+            img_ = np.zeros([h, h, 3])
+            dw = h - w
+            left = dw // 2
+            img_[:, left:left+w, :] = img
+            offset = np.array([[left / h, 0.,  left / h, 0.]])
+            scale = np.array([w / h, 1., w / h, 1.])
+
+        elif h0 < w0:
+            r = h0 / w0
+            img = cv2.resize(img, (size, int(r * size))).astype(np.float32)
+            # normalize
+            # img /= 255.
+            # img -= mean
+            # img /= std
+            h, w, _ = img.shape
+            img_ = np.zeros([w, w, 3])
+            dh = w - h
+            top = dh // 2
+            img_[top:top+h, :, :] = img
+            offset = np.array([[0., top / w, 0., top / w]])
+            scale = np.array([1., h / w, 1., h / w])
 
         else:
-            print('No padding !!')
-            image_ = image
-            scale =  np.array([[1., 1., 1., 1.]])
+            img = cv2.resize(img, (size, size)).astype(np.float32)
+            # normalize
+            # img /= 255.
+            # img -= mean
+            # img /= std
+            img_ = img
             offset = np.zeros([1, 4])
+            scale = 1.0
 
         if boxes is not None:
-            boxes = boxes * scale + offset
-
-        # resize
-        image_ = cv2.resize(image_, (size[1], size[0])).astype(np.float32)
+            boxes_ = boxes * scale + offset
         
-        return image_, boxes, scale, offset
+        return img_, boxes_, scale, offset
 
 
     class BaseTransform:
-        def __init__(self, size, mean=(0, 0, 0)):
+        def __init__(self, size, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229)):
             self.size = size
             self.mean = np.array(mean, dtype=np.float32)
+            self.std = np.array(std, dtype=np.float32)
 
-        def __call__(self, image, boxes=None, labels=None):
-            image, boxes, scale, offset = base_transform(image, self.size, self.mean, boxes)
+        def __call__(self, img, boxes=None, labels=None):
+            img, boxes, scale, offset = base_transform(img, self.size, self.mean, self.std, boxes)
 
-            return image, boxes, labels, scale, offset
+            return img, boxes, labels, scale, offset
 
     img_size = 640
     dataset = COCODataset(
                 data_dir=coco_root,
                 img_size=img_size,
-                transform=BaseTransform([img_size, img_size], (0, 0, 0)),
-                base_transform=BaseTransform([img_size, img_size], (0, 0, 0)),
+                transform=BaseTransform(img_size, (0, 0, 0), (1, 1, 1)),
+                base_transform=BaseTransform(img_size, (0, 0, 0), (1, 1, 1)),
                 debug=False,
                 mosaic=True)
     
     for i in range(1000):
-        im, gt, h, w, offset, scale = dataset.pull_item(i)
+        im, gt, h, w, _, _ = dataset.pull_item(i)
         img = im.permute(1,2,0).numpy()[:, :, (2, 1, 0)].astype(np.uint8)
-        cv2.imwrite('-1.jpg', img)
-        img = cv2.imread('-1.jpg')
+        # cv2.imwrite('-1.jpg', img)
+        # img = cv2.imread('-1.jpg')
+
         for box in gt:
             xmin, ymin, xmax, ymax, _ = box
             xmin *= img_size
             ymin *= img_size
             xmax *= img_size
             ymax *= img_size
-            img = cv2.rectangle(img, (int(xmin), int(ymin)), (int(xmax), int(ymax)), (0,0,255), 1)
+            img = cv2.rectangle(img, (int(xmin), int(ymin)), (int(xmax), int(ymax)), (0,0,255), 2)
         cv2.imshow('gt', img)
-        cv2.imwrite(str(i)+'.jpg', img)
+        # cv2.imwrite(str(i)+'.jpg', img)
         cv2.waitKey(0)

@@ -53,34 +53,9 @@ class Compose(object):
         return img, boxes, labels
 
 
-class Lambda(object):
-    """Applies a lambda as a transform."""
-
-    def __init__(self, lambd):
-        assert isinstance(lambd, types.LambdaType)
-        self.lambd = lambd
-
-    def __call__(self, img, boxes=None, labels=None):
-        return self.lambd(img, boxes, labels)
-
-
 class ConvertFromInts(object):
     def __call__(self, image, boxes=None, labels=None):
         return image.astype(np.float32), boxes, labels
-
-
-class Normalize(object):
-    def __init__(self, mean=None, std=None):
-        self.mean = np.array(mean, dtype=np.float32)
-        self.std = np.array(std, dtype=np.float32)
-
-    def __call__(self, image, boxes=None, labels=None):
-        image = image.astype(np.float32)
-        image /= 255.
-        image -= self.mean
-        image /= self.std
-
-        return image, boxes, labels
 
 
 class ToAbsoluteCoords(object):
@@ -105,46 +80,61 @@ class ToPercentCoords(object):
         return image, boxes, labels
 
 
-class ZeroPad(object):
-    def __call__(self, image, boxes=None, labels=None):
-        height, width, _ = image.shape
-        # zero padding
-        if height > width:
-            image_ = np.zeros([height, height, 3])
-            delta_w = height - width
-            left = delta_w // 2
-            image_[:, left:left+width, :] = image
-            offset = np.array([[ left / height, 0.,  left / height, 0.]])
-            scale =  np.array([[width / height, 1., width / height, 1.]])
+class Resize(object):
+    def __call__(self, image, boxes=None, labels=None, size=640, mean=None, std=None):
+        h0, w0, _ = image.shape
 
-        elif height < width:
-            image_ = np.zeros([width, width, 3])
-            delta_h = width - height
-            top = delta_h // 2
-            image_[top:top+height, :, :] = image
-            offset = np.array([[0.,    top / width, 0.,    top / width]])
-            scale =  np.array([[1., height / width, 1., height / width]])
+        if h0 > w0:
+            # resize
+            r = w0 / h0
+            image = cv2.resize(image, (int(r * size), size)).astype(np.float32)
+            # normalize
+            image /= 255.
+            image -= mean
+            image /= std
+            # zero padding
+            h, w, _ = image.shape
+            image_ = np.zeros([h, h, 3])
+            dw = h - w
+            left = dw // 2
+            image_[:, left:left+w, :] = image
+            offset = np.array([[ left / h, 0.,  left / h, 0.]])
+            scale =  np.array([[w / h, 1., w / h, 1.]])
+
+        elif h0 < w0:
+            # resize
+            r = h0 / w0
+            image = cv2.resize(image, (size, int(r * size))).astype(np.float32)
+            # normalize
+            image /= 255.
+            image -= mean
+            image /= std
+            # zero padding
+            h, w, _ = image.shape
+            image_ = np.zeros([w, w, 3])
+            dh = w - h
+            top = dh // 2
+            image_[top:top+h, :, :] = image
+            offset = np.array([[0., top / w, 0., top / w]])
+            scale = np.array([1., h / w, 1., h / w])
 
         else:
+            # resize
+            image = cv2.resize(image, (size, size)).astype(np.float32)
+            # normalize
+            image /= 255.
+            image -= mean
+            image /= std
             image_ = image
-            scale =  np.array([[1., 1., 1., 1.]])
             offset = np.zeros([1, 4])
+            scale =  1.
+
         if boxes is not None:
-            boxes = boxes * scale + offset
+            boxes_ = boxes * scale + offset
         
-        return image_, boxes, labels, scale, offset
+        return image_, boxes_, labels, scale, offset
+
         
-
-class Resize(object):
-    def __init__(self, size=[416, 416]):
-        self.size = size
-
-    def __call__(self, image, boxes=None, labels=None):
-        image = cv2.resize(image, (self.size[1],
-                                 self.size[0]))
-        return image, boxes, labels
-
-
 class RandomSaturation(object):
     def __init__(self, lower=0.5, upper=1.5):
         self.lower = lower
@@ -227,16 +217,6 @@ class RandomBrightness(object):
             delta = random.uniform(-self.delta, self.delta)
             image += delta
         return image, boxes, labels
-
-
-class ToCV2Image(object):
-    def __call__(self, tensor, boxes=None, labels=None):
-        return tensor.cpu().numpy().astype(np.float32).transpose((1, 2, 0)), boxes, labels
-
-
-class ToTensor(object):
-    def __call__(self, cvimage, boxes=None, labels=None):
-        return torch.from_numpy(cvimage.astype(np.float32)).permute(2, 0, 1), boxes, labels
 
 
 class RandomSampleCrop(object):
@@ -381,6 +361,32 @@ class RandomMirror(object):
         return image, boxes, classes
 
 
+class RandomInvert(object):
+    def __call__(self, image, boxes, classes):
+        height, _, _ = image.shape
+        if random.randint(2):
+            image = image[::-1, :]
+            boxes = boxes.copy()
+            boxes[:, 1::2] = height - boxes[:, 3::-2]
+        return image, boxes, classes
+
+
+class RandomRotate(object):
+    def __call__(self, image, boxes, classes):
+        height, weight, _ = image.shape
+        if random.randint(2):
+            # rorate 90
+            image_b = image[:, :, 0].T
+            image_g = image[:, :, 1].T
+            image_r = image[:, :, 2].T
+            image = np.stack([image_b, image_g, image_r], axis=2)
+            boxes = boxes.copy()
+            x1, y1, x2, y2 = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
+            boxes = np.stack([y1, x1, y2, x2], axis=1)
+            # In fact, 270 = 90 + mirror
+        return image, boxes, classes
+
+
 class SwapChannels(object):
     """Transforms a tensorized image by swapping the channels in the order
      specified in the swap tuple.
@@ -433,11 +439,10 @@ class PhotometricDistort(object):
 
 
 class SSDAugmentation(object):
-    def __init__(self, size=[416, 416], mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229)):
+    def __init__(self, size=640, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229)):
         self.mean = mean
         self.size = size
         self.std = std
-        self.zeropad = ZeroPad()
         self.augment = Compose([
             ConvertFromInts(),
             ToAbsoluteCoords(),
@@ -445,12 +450,38 @@ class SSDAugmentation(object):
             Expand(self.mean),
             RandomSampleCrop(),
             RandomMirror(),
-            ToPercentCoords(),
-            Resize(self.size),
-            Normalize(self.mean, self.std)
+            # RandomInvert(),
+            # RandomRotate(),
+            ToPercentCoords()
         ])
+        self.resize = Resize()
+
 
     def __call__(self, img, boxes, labels):
-        img, boxes, labels, scale, offset = self.zeropad(img, boxes, labels)
         img, boxes, labels = self.augment(img, boxes, labels)
+        img, boxes, labels, scale, offset = self.resize(img, boxes, labels, self.size, self.mean, self.std)
+        
+        return img, boxes, labels, scale, offset
+
+
+class ColorAugmentation(object):
+    def __init__(self, size=640, mean=(0.406, 0.456, 0.485), std=(0.225, 0.224, 0.229)):
+        self.mean = mean
+        self.size = size
+        self.std = std
+        self.augment = Compose([
+            ConvertFromInts(),
+            ToAbsoluteCoords(),
+            PhotometricDistort(),
+            RandomMirror(),
+            # RandomInvert(),
+            # RandomRotate(),
+            ToPercentCoords()
+        ])
+        self.resize = Resize()
+
+    def __call__(self, img, boxes, labels):
+        img, boxes, labels = self.augment(img, boxes, labels)
+        img, boxes, labels, scale, offset = self.resize(img, boxes, labels, self.size, self.mean, self.std)
+        
         return img, boxes, labels, scale, offset

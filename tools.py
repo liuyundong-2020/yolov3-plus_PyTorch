@@ -4,70 +4,30 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
-# We use ignore thresh to decide which anchor box can be kept.
-ignore_thresh = IGNORE_THRESH
 
-
-class BCELoss(nn.Module):
-    def __init__(self,  weight=None, ignore_index=-100, reduce=None, reduction='mean'):
-        super(BCELoss, self).__init__()
+class MSEWithLogitsLoss(nn.Module):
+    def __init__(self, reduction='mean'):
+        super(MSEWithLogitsLoss, self).__init__()
         self.reduction = reduction
-    def forward(self, inputs, targets, mask):
-        pos_id = (mask==1.0).float()
-        neg_id = (mask==0.0).float()
-        pos_loss = -pos_id * (targets * torch.log(inputs + 1e-14) + (1 - targets) * torch.log(1.0 - inputs + 1e-14))
-        neg_loss = -neg_id * torch.log(1.0 - inputs + 1e-14)
-        if self.reduction == 'mean':
-            pos_loss = torch.mean(torch.sum(pos_loss, 1))
-            neg_loss = torch.mean(torch.sum(neg_loss, 1))
-            return pos_loss, neg_loss
-        else:
-            return pos_loss, neg_loss
 
+    def forward(self, logits, targets, mask):
+        inputs = torch.sigmoid(logits)
 
-class MSELoss(nn.Module):
-    def __init__(self,  weight=None, size_average=None, ignore_index=-100, reduce=None, reduction='mean'):
-        super(MSELoss, self).__init__()
-        self.reduction = reduction
-    def forward(self, inputs, targets, mask):
         # We ignore those whose tarhets == -1.0. 
         pos_id = (mask==1.0).float()
         neg_id = (mask==0.0).float()
         pos_loss = pos_id * (inputs - targets)**2
         neg_loss = neg_id * (inputs)**2
+        loss = 5.0*pos_loss + 1.0*neg_loss
+
         if self.reduction == 'mean':
-            pos_loss = torch.mean(torch.sum(pos_loss, 1))
-            neg_loss = torch.mean(torch.sum(neg_loss, 1))
-            return pos_loss, neg_loss
+            batch_size = logits.size(0)
+            loss = torch.sum(loss) / batch_size
+
+            return loss
+
         else:
-            return pos_loss, neg_loss
-
-
-def generate_anchor(input_size, stride, anchor_scale, anchor_aspect):
-    """
-        The function is used to design anchor boxes by ourselves as long as you provide the scale and aspect of anchor boxes.
-        Input:
-            input_size : list -> the image resolution used in training stage and testing stage.
-            stride : int -> the downSample of the CNN, such as 32, 64 and so on.
-            anchor_scale : list -> it contains the area ratio of anchor boxes. For example, anchor_scale = [0.1, 0.5]
-            anchor_aspect : list -> it contains the aspect ratios of anchor boxes for various anchor area.
-                            For example, anchor_aspect = [[1.0, 2.0], [3.0, 1/3]]. And len(anchor_aspect) must 
-                            be equal to len(anchor_scale).
-        Output:
-            total_anchor_size : list -> [[h_1, w_1], [h_2, w_2], ..., [h_n, w_n]].
-    """
-    assert len(anchor_scale) == len(anchor_aspect)
-    h, w = input_size
-    hs, ws = h // stride, w // stride
-    S_fmap = hs * ws
-    total_anchor_size = []
-    for ab_scale, aspect_ratio in zip(anchor_scale, anchor_aspect):
-        for a in aspect_ratio:
-            S_ab = S_fmap * ab_scale
-            ab_w = np.floor(np.sqrt(S_ab))
-            ab_h =ab_w * a
-            total_anchor_size.append([ab_w, ab_h])
-    return total_anchor_size
+            return loss
 
 
 def compute_iou(anchor_boxes, gt_box):
@@ -130,19 +90,20 @@ def set_anchors(anchor_size):
     return anchor_boxes
 
 
-def multi_gt_creator(input_size, strides, label_lists=[], anchor_size=None):
+def multi_gt_creator(input_size, strides, label_lists, anchor_size, ignore_thresh):
     """creator multi scales gt"""
     # prepare the all empty gt datas
     batch_size = len(label_lists)
-    h, w = input_size
+    h = w = input_size
     num_scale = len(strides)
     gt_tensor = []
-
-    # generate gt datas
-    all_anchor_size = anchor_size # get_total_anchor_size(multi_level=True, name=name, version=version)
+    all_anchor_size = anchor_size
     anchor_number = len(all_anchor_size) // num_scale
+
     for s in strides:
         gt_tensor.append(np.zeros([batch_size, h//s, w//s, anchor_number, 1+1+4+1+4]))
+        
+    # generate gt datas    
     for batch_index in range(batch_size):
         for gt_label in label_lists[batch_index]:
             # get a bbox coords
@@ -266,167 +227,50 @@ def iou_score(bboxes_a, bboxes_b):
     return area_i / (area_a + area_b - area_i + 1e-20)
 
 
-def loss(pred_conf, pred_cls, pred_txtytwth, label, num_classes, obj_loss_f='mse'):
-    if obj_loss_f == 'bce':
-        # In yolov3, we use bce as conf loss_f
-        conf_loss_function = BCELoss(reduction='mean')
-        obj = 1.0
-        noobj = 1.0
-    elif obj_loss_f == 'mse':
-        # In yolov2, we use mse as conf loss_f.
-        conf_loss_function = MSELoss(reduction='mean')
-        obj = 5.0
-        noobj = 1.0
-
+def loss(pred_conf, pred_cls, pred_txtytwth, pred_iou, label):
+    # loss func
+    conf_loss_function = MSEWithLogitsLoss(reduction='mean')
     cls_loss_function = nn.CrossEntropyLoss(reduction='none')
     txty_loss_function = nn.BCEWithLogitsLoss(reduction='none')
     twth_loss_function = nn.MSELoss(reduction='none')
+    iou_loss_function = nn.SmoothL1Loss(reduction='none')
 
-    pred_conf = torch.sigmoid(pred_conf[:, :, 0])
+    # pred
+    pred_conf = pred_conf[:, :, 0]
     pred_cls = pred_cls.permute(0, 2, 1)
-    txty_pred = pred_txtytwth[:, :, :2]
-    twth_pred = pred_txtytwth[:, :, 2:]
-        
+    pred_txty = pred_txtytwth[:, :, :2]
+    pred_twth = pred_txtytwth[:, :, 2:]
+    pred_iou = pred_iou[:, :, 0]
+
+    # gt    
     gt_conf = label[:, :, 0].float()
     gt_obj = label[:, :, 1].float()
     gt_cls = label[:, :, 2].long()
-    gt_txtytwth = label[:, :, 3:-1].float()
-    gt_box_scale_weight = label[:, :, -1]
+    gt_txty = label[:, :, 3:5].float()
+    gt_twth = label[:, :, 5:7].float()
+    gt_box_scale_weight = label[:, :, 7].float()
+    gt_iou = (gt_box_scale_weight > 0.).float()
     gt_mask = (gt_box_scale_weight > 0.).float()
 
+    batch_size = pred_conf.size(0)
     # objectness loss
-    pos_loss, neg_loss = conf_loss_function(pred_conf, gt_conf, gt_obj)
-    conf_loss = obj * pos_loss + noobj * neg_loss
+    conf_loss = conf_loss_function(pred_conf, gt_conf, gt_obj)
     
     # class loss
-    cls_loss = torch.mean(torch.sum(cls_loss_function(pred_cls, gt_cls) * gt_mask, 1))
+    cls_loss = torch.sum(cls_loss_function(pred_cls, gt_cls) * gt_mask) / batch_size
     
     # box loss
-    txty_loss = torch.mean(torch.sum(torch.sum(txty_loss_function(txty_pred, gt_txtytwth[:, :, :2]), 2) * gt_box_scale_weight * gt_mask, 1))
-    twth_loss = torch.mean(torch.sum(torch.sum(twth_loss_function(twth_pred, gt_txtytwth[:, :, 2:]), 2) * gt_box_scale_weight * gt_mask, 1))
+    txty_loss = torch.sum(torch.sum(txty_loss_function(pred_txty, gt_txty), dim=-1) * gt_box_scale_weight * gt_mask) / batch_size
+    twth_loss = torch.sum(torch.sum(twth_loss_function(pred_twth, gt_twth), dim=-1) * gt_box_scale_weight * gt_mask) / batch_size
+    bbox_loss = txty_loss + twth_loss
 
-    txtytwth_loss = txty_loss + twth_loss
+    # iou loss
+    iou_loss = torch.sum(iou_loss_function(pred_iou, gt_iou) * gt_mask) / batch_size
 
-    total_loss = conf_loss + cls_loss + txtytwth_loss
+    # total loss
+    total_loss = conf_loss + cls_loss + bbox_loss + iou_loss
 
-    return conf_loss, cls_loss, txtytwth_loss, total_loss
-
-
-def loss_ciou(pred_conf, pred_cls, pred_ciou, label, num_classes, obj_loss_f='mse'):
-    if obj_loss_f == 'bce':
-        # In yolov3, we use bce as conf loss_f
-        conf_loss_function = BCELoss(reduction='mean')
-        obj = 1.0
-        noobj = 1.0
-    elif obj_loss_f == 'mse':
-        # In yolov2, we use mse as conf loss_f.
-        conf_loss_function = MSELoss(reduction='mean')
-        obj = 5.0
-        noobj = 1.0
-
-    cls_loss_function = nn.CrossEntropyLoss(reduction='none')
-
-    pred_conf = torch.sigmoid(pred_conf[:, :, 0])
-    pred_cls = pred_cls.permute(0, 2, 1)
-        
-    gt_conf = label[:, :, 0].float()
-    gt_obj = label[:, :, 1].float()
-    gt_cls = label[:, :, 2].long()
-    gt_box_scale_weight = label[:, :, -1]
-    gt_mask = (gt_box_scale_weight > 0.).float()
-
-    # objectness loss
-    pos_loss, neg_loss = conf_loss_function(pred_conf, gt_conf, gt_obj)
-    conf_loss = obj * pos_loss + noobj * neg_loss
-    
-    # class loss
-    cls_loss = torch.mean(torch.sum(cls_loss_function(pred_cls, gt_cls) * gt_mask, 1))
-    
-    # ciou loss
-    ciou_loss = torch.mean(torch.sum((1.0 - pred_ciou) * gt_box_scale_weight * gt_mask, 1))
-
-
-    total_loss = conf_loss + cls_loss + ciou_loss
-
-    return conf_loss, cls_loss, ciou_loss, total_loss
-
-
-# IoU and its a series of variants
-def IoU(bboxes_a, bboxes_b, batch_size):
-    """
-        Input: pred  -> [xmin, ymin, xmax, ymax], size=[B*N, 4]
-               label -> [xmin, ymin, xmax, ymax], size=[B*N, 4]
-
-        Output: IoU  -> [iou_1, iou_2, ...],    size=[B, N]
-    """
-    B = batch_size
-    iou = iou_score(bboxes_a=bboxes_a, bboxes_b=bboxes_b)
-    # size=[B*N] -> [B, N]
-    iou = iou.view(B, -1, 1)
-    return iou
-
-
-def DIoU(bboxes_a, bboxes_b, batch_size):
-    """
-        Input: pred  -> [xmin, ymin, xmax, ymax], size=[B*N, 4]
-               label -> [xmin, ymin, xmax, ymax], size=[B*N, 4]
-
-        Output: DIoU -> [diou_1, diou_2, ...],    size=[B, N]
-    """
-    B = batch_size
-
-    x1234 = torch.cat([ bboxes_a[:, [0, 2]], bboxes_b[:, [0, 2]] ], dim=1)
-    y1234 = torch.cat([ bboxes_a[:, [1, 3]], bboxes_b[:, [1, 3]] ], dim=1)
-
-    # compute the length of diagonal line
-    C = torch.sqrt((torch.max(x1234, dim=1)[0] - torch.min(x1234, dim=1)[0])**2 + \
-                (torch.max(y1234, dim=1)[0] - torch.min(y1234, dim=1)[0])**2)
-
-    # compute the distance between two center point
-    # # points-1
-    points_1_x = (bboxes_a[:, 0] + bboxes_a[:, 2]) / 2.
-    points_1_y = (bboxes_a[:, 1] + bboxes_a[:, 3]) / 2.
-    # # points-2
-    points_2_x = (bboxes_b[:, 0] + bboxes_b[:, 2]) / 2.
-    points_2_y = (bboxes_b[:, 1] + bboxes_b[:, 3]) / 2.
-    D = torch.sqrt((points_2_x - points_1_x)**2 + (points_2_y - points_1_y)**2)
-
-    # compute iou
-    iou = IoU(bboxes_a, bboxes_b, B).view(-1)
-
-    lens = D**2 / (C**2 + 1e-20)
-    diou = iou - lens
-    # size=[B*N] -> [B, N]
-    diou = diou.view(B, -1, 1)
-
-    return diou
-
-
-def CIoU(bboxes_a, bboxes_b, batch_size):
-    """
-        Input: pred  -> [xmin, ymin, xmax, ymax], size=[B*N, 4]
-               label -> [xmin, ymin, xmax, ymax], size=[B*N, 4]
-
-        Output: CIoU -> [ciou_1, ciou_2, ...],    size=[B, N]
-    """
-    B = batch_size
-    iou = IoU(bboxes_a, bboxes_b, B).view(-1)
-    diou = DIoU(bboxes_a, bboxes_b, B).view(-1)
-
-    delta_x_1 = bboxes_a[:, 2] - bboxes_a[:, 0]
-    delta_x_2 = bboxes_b[:, 2] - bboxes_b[:, 0]
-
-    delta_y_1 = bboxes_a[:, 3] - bboxes_a[:, 1] + 1e-15
-    delta_y_2 = bboxes_b[:, 3] - bboxes_b[:, 1] + 1e-15
-
-    v = 4. / math.pi**2 * ((torch.atan((delta_x_1) / (delta_y_1)) - torch.atan((delta_x_2) / (delta_y_2)))**2 + 1e-15)
-    alpha = v / ((1-iou) + v)
-
-    ciou = diou - alpha * v
-    # size=[B*N] -> [B, N]
-    ciou = ciou.view(B, -1)
-
-    return ciou
+    return conf_loss, cls_loss, bbox_loss, iou_loss, total_loss
 
 
 if __name__ == "__main__":
@@ -438,12 +282,3 @@ if __name__ == "__main__":
                              ])
     iou = compute_iou(anchor_boxes, gt_box)
     print(iou)
-
-    box1 = torch.FloatTensor([[0,0,8,6], [0, 0, 10, 10]]) / 100.
-    box2 = torch.FloatTensor([[2,3,10,9], [100, 100, 10, 10]]) / 100.
-    iou = IoU(box1, box2, batch_size=2)
-    print('iou: ', iou)
-    diou = DIoU(box1, box2, batch_size=2)
-    print('diou: ', diou)
-    ciou = CIoU(box1, box2, batch_size=2)
-    print('ciou: ', ciou)
