@@ -1,8 +1,3 @@
-from data import *
-from data.cocodataset import *
-import numpy as np
-import random
-
 from data import BaseTransform, VOC_ROOT, VOCDetection, coco_root, COCODataset
 import numpy as np
 import random
@@ -19,6 +14,8 @@ def parse_args():
     parser.add_argument('-size', '--input_size', default=416, type=int,
                         help='input size.')
     return parser.parse_args()
+                    
+args = parse_args()
                     
 
 class Box():
@@ -156,9 +153,79 @@ def anchor_box_kmeans(total_gt_boxes, n_anchors, loss_convergence, iters, plus=T
     
     print("k-means result : ") 
     for centroid in centroids:
-        print(round(centroid.w, 2), round(centroid.h, 2), "area: ", round(centroid.w, 2) * round(centroid.h, 2))
+        print("w, h: ", round(centroid.w, 2), round(centroid.h, 2), 
+            "area: ", round(centroid.w, 2) * round(centroid.h, 2))
     
     return centroids
+
+
+if __name__ == "__main__":
+
+    n_anchors = args.num_anchorbox
+    size = args.input_size
+    dataset = args.dataset
+    
+    loss_convergence = 1e-6
+    iters_n = 1000
+
+    dataset_voc = VOCDetection(root=VOC_ROOT, 
+                                img_size=size,
+                                transform=BaseTransform(size)
+                                )
+
+    dataset_coco = COCODataset(data_dir=coco_root,
+                                img_size=size,
+                                transform=BaseTransform(size)
+                                )
+
+    boxes = []
+    print("The dataset size: ", len(dataset))
+    print("Loading the dataset ...")
+    # VOC
+    for i in range(len(dataset_voc)):
+        if i % 5000 == 0:
+            print('Loading voc data [%d / %d]' % (i+1, len(dataset)))
+
+        # For VOC
+        img, _ = dataset.pull_image(i)
+        w, h = img.shape[1], img.shape[0]
+        _, annotation = dataset.pull_anno(i)
+
+        # prepare bbox datas
+        for box_and_label in annotation:
+            box = box_and_label[:-1]
+            xmin, ymin, xmax, ymax = box
+            bw = (xmax - xmin) / max(w, h) * size
+            bh = (ymax - ymin) / max(w, h) * size
+            # check bbox
+            if bw < 1.0 or bh < 1.0:
+                continue
+            boxes.append(Box(0, 0, bw, bh))
+
+    # COCO
+    for i in range(len(dataset_voc)):
+        if i % 5000 == 0:
+            print('Loading coco datat [%d / %d]' % (i+1, len(dataset)))
+
+        # For COCO
+        img, _ = dataset.pull_image(i)
+        w, h = img.shape[1], img.shape[0]
+        annotation = dataset.pull_anno(i)
+
+        # prepare bbox datas
+        for box_and_label in annotation:
+            box = box_and_label[:-1]
+            xmin, ymin, xmax, ymax = box
+            bw = (xmax - xmin) / max(w, h) * size
+            bh = (ymax - ymin) / max(w, h) * size
+            # check bbox
+            if bw < 1.0 or bh < 1.0:
+                continue
+            boxes.append(Box(0, 0, bw, bh))
+
+    print("Number of all bboxes: ", len(boxes))
+    print("Start k-means !")
+    centroids = anchor_box_kmeans(boxes, n_anchors, loss_convergence, iters_n, plus=True)
 
 
 if __name__ == "__main__":
@@ -172,13 +239,13 @@ if __name__ == "__main__":
     iters_n = 1000
 
     if dataset == 'voc':
-        dataset = VOCDetection(root=VOC_ROOT, img_size=None, transform=BaseTransform([size, size]))
+        dataset = VOCDetection(root=VOC_ROOT, img_size=None, transform=BaseTransform(size))
 
     elif dataset == 'coco':
         dataset = COCODataset(
                     data_dir=coco_root,
                     img_size=size,
-                    transform=BaseTransform([size, size]))
+                    transform=BaseTransform(size))
 
     boxes = []
     print("The dataset size: ", len(dataset))

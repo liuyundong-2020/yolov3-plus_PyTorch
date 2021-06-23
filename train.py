@@ -10,55 +10,62 @@ import numpy as np
 import torch
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 from data import *
 import tools
 
-from utils import SSDAugmentation
-from utils.cocoapi_evaluator import COCOAPIEvaluator
-from utils.vocapi_evaluator import VOCAPIEvaluator
+from data import VOC_CLASSES, VOC_ROOT, VOCDetection
+from data import coco_root, COCODataset
+from data import config
+from data import BaseTransform, detection_collate
+
+import tools
+
+from utils import distributed_utils
+from utils.augmentations import SSDAugmentation, ColorAugmentation
+from utils.coco_evaluator import COCOAPIEvaluator
+from utils.voc_evaluator import VOCAPIEvaluator
+from utils.modules import ModelEMA
+
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='YOLO Detection')
-    parser.add_argument('-v', '--version', default='yolo_v3_plus',
-                        help='yolo_v3_plus, yolo_v3_plus_x, yolo_v3_plus_large, yolo_v3_plus_medium, yolo_v3_plus_small, \
-                              yolo_v3_slim, yolo_v3_slim_csp.')
+    parser = argparse.ArgumentParser(description='YOLOv3Plus Detection')
+    parser.add_argument('-v', '--version', default='yolov3p_cd53',
+                        help='yolov3p_cd53')
     parser.add_argument('-d', '--dataset', default='voc',
                         help='voc or coco')
     parser.add_argument('-hr', '--high_resolution', action='store_true', default=False,
                         help='use high resolution to pretrain.')  
     parser.add_argument('-ms', '--multi_scale', action='store_true', default=False,
-                        help='use multi-scale trick')                  
+                        help='use multi-scale trick')      
+    parser.add_argument('--mosaic', action='store_true', default=False,
+                        help='use mosaic augmentation')
+    parser.add_argument('--ema', action='store_true', default=False,
+                        help='use ema training trick')
+    parser.add_argument('-dist', '--distributed', action='store_true', default=False,
+                        help='distributed training')
+    parser.add_argument('--local_rank', type=int, default=0, 
+                        help='local_rank')
+    parser.add_argument('--sybn', action='store_true', default=False, 
+                        help='use sybn.')
     parser.add_argument('--batch_size', default=32, type=int, 
                         help='Batch size for training')
     parser.add_argument('--lr', default=1e-3, type=float, 
                         help='initial learning rate')
-    parser.add_argument('-cos', '--cos', action='store_true', default=False,
-                        help='use cos lr')
-    parser.add_argument('-no_wp', '--no_warm_up', action='store_true', default=False,
-                        help='yes or no to choose using warmup strategy to train')
-    parser.add_argument('--wp_epoch', type=int, default=2,
-                        help='The upper bound of warm-up')
     parser.add_argument('--start_epoch', type=int, default=0,
                         help='start epoch to train')
     parser.add_argument('-r', '--resume', default=None, type=str, 
                         help='keep training')
-    parser.add_argument('--momentum', default=0.9, type=float, 
-                        help='Momentum value for optim')
-    parser.add_argument('--weight_decay', default=5e-4, type=float, 
-                        help='Weight decay for SGD')
-    parser.add_argument('--gamma', default=0.1, type=float, 
-                        help='Gamma update for SGD')
     parser.add_argument('--num_workers', default=8, type=int, 
                         help='Number of workers used in dataloading')
+    parser.add_argument('--num_gpu', default=1, type=int, 
+                        help='Number of GPUs.')
     parser.add_argument('--eval_epoch', type=int,
                             default=10, help='interval between evaluations')
     parser.add_argument('--cuda', action='store_true', default=False,
                         help='use cuda.')
-    parser.add_argument('--mosaic', action='store_true', default=False,
-                        help='use mosaic augmentation.')
-    parser.add_argument('--ciou_loss', action='store_true', default=False,
-                        help='use ciou_loss.')
     parser.add_argument('--tfboard', action='store_true', default=False,
                         help='use tensorboard')
     parser.add_argument('--debug', action='store_true', default=False,
@@ -71,17 +78,16 @@ def parse_args():
 
 def train():
     args = parse_args()
+    print("Setting Arguments.. : ", args)
+    print("----------------------------------------------------------")
+    # set distributed
+    local_rank = 0
+    if args.distributed:
+        dist.init_process_group(backend="nccl", init_method="env://")
+        local_rank = torch.distributed.get_rank()
+        print(local_rank)
+        torch.cuda.set_device(local_rank)
 
-    path_to_save = os.path.join(args.save_folder, args.dataset, args.version)
-    os.makedirs(path_to_save, exist_ok=True)
-
-    # use hi-res backbone
-    if args.high_resolution:
-        print('use hi-res backbone')
-        hr = True
-    else:
-        hr = False
-    
     # cuda
     if args.cuda:
         print('use cuda')
@@ -89,30 +95,57 @@ def train():
         device = torch.device("cuda")
     else:
         device = torch.device("cpu")
+    
+    # use hi-res backbone
+    if args.high_resolution:
+        print('use hi-res backbone')
+        hr = True
+    else:
+        hr = False
+
+    # model name
+    model_name = args.version
+    print('Model: ', model_name)
+
+    # load model and config file
+    if model_name == 'yolov3p_cd53':
+        from models.yolo_v3_plus import YOLOv3Plus as yolov3p_net
+        cfg = config.yolov3plus_cfg
+        backbone = cfg['backbone']
+        anchor_size = cfg['anchor_size']
+
+    else:
+        print('Unknown model name...')
+        exit(0)
+
+    # path to save model
+    path_to_save = os.path.join(args.save_folder, args.dataset, args.version)
+    os.makedirs(path_to_save, exist_ok=True)
+    
+    # mosaic augmentation
+    if args.mosaic:
+        print('use Mosaic Augmentation ...')
 
     # multi-scale
     if args.multi_scale:
         print('use the multi-scale trick ...')
-        train_size = [640, 640]
-        val_size = [416, 416]
+        train_size = cfg['train_size']
+        val_size = cfg['val_size']
     else:
-        train_size = [416, 416]
-        val_size = [416, 416]
+        train_size = val_size = cfg['val_size']
 
-    cfg = train_cfg
+    # EMA trick
+    if args.ema:
+        print('use EMA trick ...')
+
     # dataset and evaluator
-    print("Setting Arguments.. : ", args)
-    print("----------------------------------------------------------")
-    print('Loading the dataset...')
-
     if args.dataset == 'voc':
         data_dir = VOC_ROOT
         num_classes = 20
-        anchor_size = MULTI_ANCHOR_SIZE
         dataset = VOCDetection(root=data_dir, 
-                                img_size=train_size[0],
+                                img_size=train_size,
                                 transform=SSDAugmentation(train_size),
-                                base_transform=BaseTransform(train_size),
+                                base_transform=ColorAugmentation(train_size),
                                 mosaic=args.mosaic
                                 )
 
@@ -126,15 +159,12 @@ def train():
     elif args.dataset == 'coco':
         data_dir = coco_root
         num_classes = 80
-        anchor_size = MULTI_ANCHOR_SIZE_COCO
         dataset = COCODataset(
                     data_dir=data_dir,
-                    img_size=train_size[0],
+                    img_size=train_size,
                     transform=SSDAugmentation(train_size),
-                    base_transform=BaseTransform(train_size),
-                    mosaic=args.mosaic,
-                    debug=args.debug)
-
+                    base_transform=ColorAugmentation(train_size),
+                    mosaic=args.mosaic)
 
         evaluator = COCOAPIEvaluator(
                         data_dir=data_dir,
@@ -151,200 +181,210 @@ def train():
     print('The dataset size:', len(dataset))
     print("----------------------------------------------------------")
 
-    # dataloader
-    dataloader = torch.utils.data.DataLoader(
-                    dataset, 
-                    batch_size=args.batch_size, 
-                    shuffle=True, 
-                    collate_fn=detection_collate,
-                    num_workers=args.num_workers,
-                    pin_memory=True
-                    )
 
     # build model
-    # # yolo_v3_plus series: yolo_v3_plus, yolo_v3_plus_x, yolo_v3_plus_large, yolo_v3_plus_medium, yolo_v3_plus_small
-    if args.version == 'yolo_v3_plus':
-        from models.yolo_v3_plus import YOLOv3Plus
-        backbone = 'd-53'
-        
-        yolo_net = YOLOv3Plus(device, input_size=train_size, num_classes=num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
-        print('Let us train yolo_v3_plus on the COCO dataset ......')
+    anchor_size = cfg['anchor_size_voc'] if args.dataset == 'voc' else cfg['anchor_size_coco']
+    net = yolov3p_net(device=device, 
+                        input_size=train_size, 
+                        num_classes=num_classes, 
+                        trainable=True, 
+                        anchor_size=anchor_size, 
+                        hr=hr,
+                        bk=backbone
+                        )
+    model = net
 
-    elif args.version == 'yolo_v3_plus_x':
-        from models.yolo_v3_plus import YOLOv3Plus
-        backbone = 'csp-x'
-        
-        yolo_net = YOLOv3Plus(device, input_size=train_size, num_classes=num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
-        print('Let us train yolo_v3_plus_x on the COCO dataset ......')
-        
-    elif args.version == 'yolo_v3_plus_large':
-        from models.yolo_v3_plus import YOLOv3Plus
-        backbone = 'csp-l'
-        
-        yolo_net = YOLOv3Plus(device, input_size=train_size, num_classes=num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
-        print('Let us train yolo_v3_plus_large on the COCO dataset ......')
-        
-    elif args.version == 'yolo_v3_plus_medium':
-        from models.yolo_v3_plus import YOLOv3Plus
-        backbone = 'csp-m'
-        
-        yolo_net = YOLOv3Plus(device, input_size=train_size, num_classes=num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
-        print('Let us train yolo_v3_plus_medium on the COCO dataset ......')
-    
-    elif args.version == 'yolo_v3_plus_small':
-        from models.yolo_v3_plus import YOLOv3Plus
-        backbone = 'csp-s'
-        
-        yolo_net = YOLOv3Plus(device, input_size=train_size, num_classes=num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
-        print('Let us train yolo_v3_plus_small on the COCO dataset ......')
-    
-    # # yolo_v3_slim series: yolo_v3_slim, yolo_v3_slim_csp
-    elif args.version == 'yolo_v3_slim':
-        from models.yolo_v3_slim import YOLOv3Slim
-        backbone = 'd-tiny'
-        
-        yolo_net = YOLOv3Slim(device, input_size=train_size, num_classes=num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
-        print('Let us train yolo_v3_slim on the COCO dataset ......')
+    # SyncBatchNorm
+    if args.sybn and args.cuda and args.num_gpu > 1:
+        print('use SyncBatchNorm ...')
+        model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
 
-    elif args.version == 'yolo_v3_slim_csp':
-        from models.yolo_v3_slim import YOLOv3Slim
-        backbone = 'csp-slim'
-        
-        yolo_net = YOLOv3Slim(device, input_size=train_size, num_classes=num_classes, trainable=True, anchor_size=anchor_size, hr=hr, backbone=backbone, ciou=args.ciou_loss)
-        print('Let us train yolo_v3_slim_csp on the COCO dataset ......')
+    model = model.to(device)
 
+
+    # distributed
+    if args.distributed and args.num_gpu > 1:
+        print('using DDP ...')
+        model = DDP(model, device_ids=[local_rank], output_device=local_rank)
+        sampler=torch.utils.data.distributed.DistributedSampler(dataset)
     else:
-        print('Unknown version !!!')
-        exit()
+        model = model.train().to(device)
+        sampler = torch.utils.data.RandomSampler(dataset)
 
-    model = yolo_net
-    model.to(device).train()
+    # dataloader
+    dataloader = torch.utils.data.DataLoader(
+                    dataset=dataset, 
+                    batch_size=args.batch_size, 
+                    collate_fn=detection_collate,
+                    num_workers=args.num_workers,
+                    pin_memory=True,
+                    sampler=sampler
+                    )
+
+    # keep training
+    if args.resume is not None:
+        print('keep training model: %s' % (args.resume))
+        if args.distributed:
+            model.module.load_state_dict(torch.load(args.resume, map_location=device))
+        else:
+            model.load_state_dict(torch.load(args.resume, map_location=device))
+
+    # EMA
+    ema = ModelEMA(model) if args.ema else None
 
     # use tfboard
     if args.tfboard:
         print('use tensorboard')
         from torch.utils.tensorboard import SummaryWriter
         c_time = time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
-        log_path = os.path.join('log/coco/', args.version, c_time)
+        log_path = os.path.join('log/', args.dataset, c_time)
         os.makedirs(log_path, exist_ok=True)
 
-        writer = SummaryWriter(log_path)
+        tblogger = SummaryWriter(log_path)
     
-    # keep training
-    if args.resume is not None:
-        print('keep training model: %s' % (args.resume))
-        model.load_state_dict(torch.load(args.resume, map_location=device))
-
     # optimizer setup
     base_lr = args.lr
     tmp_lr = base_lr
     optimizer = optim.SGD(model.parameters(), 
                             lr=args.lr, 
-                            momentum=args.momentum,
-                            weight_decay=args.weight_decay
+                            momentum=0.9,
+                            weight_decay=5e-4
                             )
 
+    batch_size = args.batch_size
     max_epoch = cfg['max_epoch']
-    epoch_size = len(dataset) // args.batch_size
+    epoch_size = len(dataset) // (batch_size * args.num_gpu)
 
-    # start training loop
+    best_map = 0.
     t0 = time.time()
-
     for epoch in range(args.start_epoch, max_epoch):
 
-        # use cos lr
-        if args.cos and epoch > 20 and epoch <= max_epoch - 20:
-            # use cos lr
-            tmp_lr = 0.00001 + 0.5*(base_lr-0.00001)*(1+math.cos(math.pi*(epoch-20)*1./ (max_epoch-20)))
-            set_lr(optimizer, tmp_lr)
-
-        elif args.cos and epoch > max_epoch - 20:
-            tmp_lr = 0.00001
-            set_lr(optimizer, tmp_lr)
-        
         # use step lr
-        else:
-            if epoch in cfg['lr_epoch']:
-                tmp_lr = tmp_lr * 0.1
-                set_lr(optimizer, tmp_lr)
+        if epoch in cfg['lr_epoch']:
+            tmp_lr = tmp_lr * 0.1
+            set_lr(optimizer, tmp_lr)
     
-
         for iter_i, (images, targets) in enumerate(dataloader):
             # WarmUp strategy for learning rate
-            if not args.no_warm_up:
-                if epoch < args.wp_epoch:
-                    tmp_lr = base_lr * pow((iter_i+epoch*epoch_size)*1. / (args.wp_epoch*epoch_size), 4)
-                    # tmp_lr = 1e-6 + (base_lr-1e-6) * (iter_i+epoch*epoch_size) / (epoch_size * (args.wp_epoch))
-                    set_lr(optimizer, tmp_lr)
+            if epoch < 2:
+                tmp_lr = base_lr * pow((iter_i+epoch*epoch_size)*1. / (2*epoch_size), 4)
+                set_lr(optimizer, tmp_lr)
 
-                elif epoch == args.wp_epoch and iter_i == 0:
-                    tmp_lr = base_lr
-                    set_lr(optimizer, tmp_lr)
-        
-            # to device
-            images = images.to(device).float()
+            elif epoch == 2 and iter_i == 0:
+                tmp_lr = base_lr
+                set_lr(optimizer, tmp_lr)
 
             # multi-scale trick
             if iter_i % 10 == 0 and iter_i > 0 and args.multi_scale:
                 # randomly choose a new size
-                size = random.randint(10, 19) * 32
-                train_size = [size, size]
+                r = cfg['random_size_range']
+                train_size = random.randint(r[0], r[1]) * 32
                 model.set_grid(train_size)
             if args.multi_scale:
                 # interpolate
                 images = torch.nn.functional.interpolate(images, size=train_size, mode='bilinear', align_corners=False)
             
-            # make train label
+            # make labels
             targets = [label.tolist() for label in targets]
             # vis_data(images, targets, train_size)
-            targets = tools.multi_gt_creator(train_size, yolo_net.stride, targets, anchor_size=anchor_size)
+            # continue
+            targets = tools.multi_gt_creator(input_size=train_size, 
+                                             stride=net.stride, 
+                                             label_lists=targets, 
+                                             anchor_size=anchor_size,
+                                             ignore_thresh=cfg['ignore_thresh']
+                                            )
+                                        
+            # to device
+            images = images.to(device)
             targets = torch.tensor(targets).float().to(device)
 
-            # forward and loss
-            conf_loss, cls_loss, txtytwth_loss, total_loss = model(images, target=targets)
+            # forward
+            conf_loss, cls_loss, reg_loss, iou_loss, total_loss = model(images, target=targets)
+
+            loss_dict = dict(
+                conf_loss=conf_loss,
+                cls_loss=cls_loss,
+                reg_loss=reg_loss,
+                iou_loss=iou_loss,
+                total_loss=total_loss
+            )
+            loss_dict_reduced = distributed_utils.reduce_loss_dict(loss_dict)
 
             # backprop
             total_loss.backward()        
             optimizer.step()
             optimizer.zero_grad()
 
+            # ema
+            if args.ema:
+                ema.update(model)
+
             # display
             if iter_i % 10 == 0:
                 if args.tfboard:
                     # viz loss
-                    writer.add_scalar('object loss', conf_loss.item(), iter_i + epoch * epoch_size)
-                    writer.add_scalar('class loss', cls_loss.item(), iter_i + epoch * epoch_size)
-                    writer.add_scalar('local loss', txtytwth_loss.item(), iter_i + epoch * epoch_size)
+                    tblogger.add_scalar('conf loss', loss_dict_reduced['conf_loss'].item(), iter_i + epoch * epoch_size)
+                    tblogger.add_scalar('cls loss',  loss_dict_reduced['cls_loss'].item(),  iter_i + epoch * epoch_size)
+                    tblogger.add_scalar('reg loss',  loss_dict_reduced['reg_loss'].item(),  iter_i + epoch * epoch_size)
+                    tblogger.add_scalar('iou loss',  loss_dict_reduced['iou_loss'].item(),  iter_i + epoch * epoch_size)
                 
                 t1 = time.time()
                 print('[Epoch %d/%d][Iter %d/%d][lr %.6f]'
-                    '[Loss: obj %.2f || cls %.2f || bbox %.2f || total %.2f || size %d || time: %.2f]'
+                    '[Loss: conf %.2f || cls %.2f || reg %.2f || iou %.2f || size %d || time: %.2f]'
                         % (epoch+1, max_epoch, iter_i, epoch_size, tmp_lr,
-                            conf_loss.item(), cls_loss.item(), txtytwth_loss.item(), total_loss.item(), train_size[0], t1-t0),
+                            loss_dict_reduced['conf_loss'].item(), 
+                            loss_dict_reduced['cls_loss'].item(), 
+                            loss_dict_reduced['reg_loss'].item(), 
+                            loss_dict_reduced['iou_loss'].item(),
+                            train_size, 
+                            t1-t0),
                         flush=True)
 
                 t0 = time.time()
 
         # evaluation
         if (epoch + 1) % args.eval_epoch == 0:
-            model.trainable = False
-            model.set_grid(val_size)
-            model.eval()
+            if args.ema:
+                model_eval = ema.ema
+            else:
+                model_eval = model.module if args.distributed else model
 
-            # evaluate
-            evaluator.evaluate(model)
+            # set eval mode
+            model_eval.trainable = False
+            model_eval.set_grid(val_size)
+            model_eval.eval()
 
-            # convert to training mode.
-            model.trainable = True
-            model.set_grid(train_size)
-            model.train()
+            if local_rank == 0:
+                # evaluate
+                evaluator.evaluate(model_eval)
 
-        # save model
-        if (epoch + 1) % 10 == 0:
-            print('Saving state, epoch:', epoch + 1)
-            torch.save(model.state_dict(), os.path.join(path_to_save, 
-                        args.version + '_' + repr(epoch + 1) + '.pth')
-                        )  
+                cur_map = evaluator.map if args.dataste == 'voc' else evaluator.ap50_95
+                if cur_map > best_map:
+                    # update best-map
+                    best_map = cur_map
+                    # save model
+                    print('Saving state, epoch:', epoch + 1)
+                    torch.save(model_eval.state_dict(), os.path.join(path_to_save, 
+                                args.version + '_' + repr(epoch + 1) + '_' + str(round(best_map, 2)) + '.pth')
+                                )  
+                if args.tfboard:
+                    if args.dataset == 'voc':
+                        tblogger.add_scalar('07test/mAP', evaluator.map, epoch)
+                    elif args.dataset == 'coco':
+                        tblogger.add_scalar('val/AP50_95', evaluator.ap50_95, epoch)
+                        tblogger.add_scalar('val/AP50', evaluator.ap50, epoch)
+
+            # wait for all processes to synchronize
+            dist.barrier()
+
+            # set train mode.
+            model_eval.trainable = True
+            model_eval.set_grid(train_size)
+            model_eval.train()
+    
+    if args.tfboard:
+        tblogger.close()
 
 
 def set_lr(optimizer, lr):
@@ -354,7 +394,6 @@ def set_lr(optimizer, lr):
 
 def vis_data(images, targets, input_size):
     # vis data
-    h, w = input_size
     mean=(0.406, 0.456, 0.485)
     std=(0.225, 0.224, 0.229)
     mean = np.array(mean, dtype=np.float32)
@@ -368,10 +407,10 @@ def vis_data(images, targets, input_size):
     for box in targets[0]:
         xmin, ymin, xmax, ymax = box[:-1]
         # print(xmin, ymin, xmax, ymax)
-        xmin *= w
-        ymin *= h
-        xmax *= w
-        ymax *= h
+        xmin *= input_size
+        ymin *= input_size
+        xmax *= input_size
+        ymax *= input_size
         cv2.rectangle(img_, (int(xmin), int(ymin)), (int(xmax), int(ymax)), (0, 0, 255), 2)
 
     cv2.imshow('img', img_)
