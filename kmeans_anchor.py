@@ -184,12 +184,12 @@ if __name__ == "__main__":
     # VOC
     for i in range(len(dataset_voc)):
         if i % 5000 == 0:
-            print('Loading voc data [%d / %d]' % (i+1, len(dataset)))
+            print('Loading voc data [%d / %d]' % (i+1, len(dataset_voc)))
 
         # For VOC
-        img, _ = dataset.pull_image(i)
+        img, _ = dataset_voc.pull_image(i)
         w, h = img.shape[1], img.shape[0]
-        _, annotation = dataset.pull_anno(i)
+        _, annotation = dataset_voc.pull_anno(i)
 
         # prepare bbox datas
         for box_and_label in annotation:
@@ -203,14 +203,14 @@ if __name__ == "__main__":
             boxes.append(Box(0, 0, bw, bh))
 
     # COCO
-    for i in range(len(dataset_voc)):
+    for i in range(len(dataset_coco)):
         if i % 5000 == 0:
-            print('Loading coco datat [%d / %d]' % (i+1, len(dataset)))
+            print('Loading coco datat [%d / %d]' % (i+1, len(dataset_coco)))
 
         # For COCO
-        img, _ = dataset.pull_image(i)
+        img, _ = dataset_coco.pull_image(i)
         w, h = img.shape[1], img.shape[0]
-        annotation = dataset.pull_anno(i)
+        annotation = dataset_coco.pull_anno(i)
 
         # prepare bbox datas
         for box_and_label in annotation:
