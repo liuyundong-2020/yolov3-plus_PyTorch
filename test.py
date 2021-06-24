@@ -1,5 +1,6 @@
 import os
 import argparse
+from typing import Tuple
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
@@ -61,15 +62,18 @@ def vis(img, bboxes, scores, cls_inds, thresh, class_colors, class_names, class_
 
 def test(net, device, testset, transform, thresh, class_colors=None, class_names=None, class_indexs=None, dataset='voc'):
     num_images = len(testset)
+    save_path = os.path.join('det_results/images/', args.dataset)
+    os.makedirs(save_path, exist_ok=True)
+
     for index in range(num_images):
         print('Testing image {:d}/{:d}....'.format(index+1, num_images))
-        img, _ = testset.pull_image(index)
+        img_raw, _ = testset.pull_image(index)
         h, w, _ = img.shape
         size = np.array([[w, h, w, h]])
 
         # preprocess
-        img, _, _, scale, offset = transform(img)
-        x = torch.from_numpy(img[:, :, (2, 1, 0)]).permute(2, 0, 1)
+        img, _, _, scale, offset = transform(img_raw)
+        x = torch.from_numpy(img[:, :, (2, 1, 0)]).permute(2, 0, 1).float()
         x = x.unsqueeze(0).to(device)
 
         t0 = time.time()
@@ -82,11 +86,11 @@ def test(net, device, testset, transform, thresh, class_colors=None, class_names
         bboxes /= scale
         bboxes *= size
 
-        img_processed = vis(img, bboxes, scores, cls_inds, thresh, class_colors, class_names, class_indexs, dataset)
+        img_processed = vis(img_raw, bboxes, scores, cls_inds, thresh, class_colors, class_names, class_indexs, dataset)
         cv2.imshow('detection', img_processed)
         cv2.waitKey(0)
-        # print('Saving the' + str(index) + '-th image ...')
-        # cv2.imwrite('test_images/' + args.dataset+ '3/' + str(index).zfill(6) +'.jpg', img)
+        print('Saving the' + str(index) + '-th image ...')
+        cv2.imwrite(os.path.join(save_path, str(index).zfill(6) +'.jpg'), img_processed)
 
 
 if __name__ == '__main__':

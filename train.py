@@ -50,7 +50,7 @@ def parse_args():
                         help='local_rank')
     parser.add_argument('--sybn', action='store_true', default=False, 
                         help='use sybn.')
-    parser.add_argument('--batch_size', default=32, type=int, 
+    parser.add_argument('--batch_size', default=16, type=int, 
                         help='Batch size for training')
     parser.add_argument('--lr', default=1e-3, type=float, 
                         help='initial learning rate')

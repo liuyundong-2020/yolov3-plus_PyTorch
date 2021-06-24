@@ -70,7 +70,6 @@ class VOCAPIEvaluator():
             # map the boxes to original image
             bboxes -= offset
             bboxes /= scale
-            
             bboxes *= size
 
             for j in range(len(self.labelmap)):

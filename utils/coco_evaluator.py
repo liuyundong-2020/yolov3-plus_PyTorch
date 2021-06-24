@@ -90,7 +90,7 @@ class COCOAPIEvaluator():
 
             # preprocess
             img, _, _, scale, offset = self.transform(img)
-            x = torch.from_numpy(img[:, :, (2, 1, 0)]).permute(2, 0, 1)
+            x = torch.from_numpy(img[:, :, (2, 1, 0)]).permute(2, 0, 1).float()
             x = x.unsqueeze(0).to(self.device)
             
             id_ = int(id_)
@@ -143,6 +143,6 @@ class COCOAPIEvaluator():
             self.ap50_95 = ap50_95
             self.ap50 = ap50
 
-            return ap50, ap50_95
+            return ap50_95, ap50
         else:
             return -1, -1

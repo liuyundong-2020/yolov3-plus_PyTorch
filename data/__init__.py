@@ -75,9 +75,9 @@ def base_transform(img, size, mean, std, boxes=None):
         scale = 1.0
 
     if boxes is not None:
-        boxes_ = boxes * scale + offset
+        boxes = boxes * scale + offset
     
-    return img_, boxes_, scale, offset
+    return img_, boxes, scale, offset
 
 
 class BaseTransform:

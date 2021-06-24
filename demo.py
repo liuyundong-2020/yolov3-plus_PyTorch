@@ -75,7 +75,7 @@ def detect(net, device, transform, thresh, mode='image', path_to_img=None, path_
 
             # preprocess
             img, _, _, scale, offset = transform(frame)
-            x = torch.from_numpy(img[:, :, (2, 1, 0)]).permute(2, 0, 1)
+            x = torch.from_numpy(img[:, :, (2, 1, 0)]).permute(2, 0, 1).float()
             x = x.unsqueeze(0).to(device)
 
             t0 = time.time()
@@ -109,7 +109,7 @@ def detect(net, device, transform, thresh, mode='image', path_to_img=None, path_
 
             # preprocess
             img, _, _, scale, offset = transform(img_raw)
-            x = torch.from_numpy(img[:, :, (2, 1, 0)]).permute(2, 0, 1)
+            x = torch.from_numpy(img[:, :, (2, 1, 0)]).permute(2, 0, 1).float()
             x = x.unsqueeze(0).to(device)
 
             t0 = time.time()
@@ -122,7 +122,7 @@ def detect(net, device, transform, thresh, mode='image', path_to_img=None, path_
             bboxes /= scale
             bboxes *= size
 
-            img_processed = vis(img=img, 
+            img_processed = vis(img=img_raw, 
                                 bboxs=bboxes,
                                 scores=scores, 
                                 cls_inds=cls_inds,
@@ -155,7 +155,7 @@ def detect(net, device, transform, thresh, mode='image', path_to_img=None, path_
 
                 # preprocess
                 img, _, _, scale, offset = transform(frame)
-                x = torch.from_numpy(img[:, :, (2, 1, 0)]).permute(2, 0, 1)
+                x = torch.from_numpy(img[:, :, (2, 1, 0)]).permute(2, 0, 1).float()
                 x = x.unsqueeze(0).to(device)
 
                 t0 = time.time()
