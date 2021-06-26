@@ -183,7 +183,7 @@ def train():
 
 
     # build model
-    anchor_size = cfg['anchor_size_voc'] if args.dataset == 'voc' else cfg['anchor_size_coco']
+    anchor_size = cfg['anchor_size']
     net = yolov3p_net(device=device, 
                         input_size=train_size, 
                         num_classes=num_classes, 
@@ -359,7 +359,7 @@ def train():
                 # evaluate
                 evaluator.evaluate(model_eval)
 
-                cur_map = evaluator.map if args.dataste == 'voc' else evaluator.ap50_95
+                cur_map = evaluator.map if args.dataset == 'voc' else evaluator.ap50_95
                 if cur_map > best_map:
                     # update best-map
                     best_map = cur_map
