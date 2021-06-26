@@ -28,7 +28,7 @@ coco_class_index = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 1
                     46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 67,
                     70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90]
 
-coco_root = '/data/Dataset/COCO/'
+coco_root = '/mnt/share/ssd2/dataset/COCO/'
 
 
 class COCODataset(Dataset):
@@ -364,8 +364,8 @@ if __name__ == "__main__":
     for i in range(1000):
         im, gt, h, w, _, _ = dataset.pull_item(i)
         img = im.permute(1,2,0).numpy()[:, :, (2, 1, 0)].astype(np.uint8)
-        # cv2.imwrite('-1.jpg', img)
-        # img = cv2.imread('-1.jpg')
+        cv2.imwrite('-1.jpg', img)
+        img = cv2.imread('-1.jpg')
 
         for box in gt:
             xmin, ymin, xmax, ymax, _ = box

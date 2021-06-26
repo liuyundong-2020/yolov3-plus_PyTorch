@@ -25,7 +25,7 @@ VOC_CLASSES = (  # always index 0
     'motorbike', 'person', 'pottedplant',
     'sheep', 'sofa', 'train', 'tvmonitor')
 
-VOC_ROOT = "/data/Dataset/VOC/VOCdevkit/"
+VOC_ROOT = "/mnt/share/ssd2/dataset/VOCdevkit/"
 
 
 class VOCAnnotationTransform(object):
@@ -348,8 +348,8 @@ if __name__ == "__main__":
     for i in range(1000):
         im, gt, h, w, scale, offset = dataset.pull_item(i)
         img = im.permute(1,2,0).numpy()[:, :, (2, 1, 0)].astype(np.uint8)
-        # cv2.imwrite('-1.jpg', img)
-        # img = cv2.imread('-1.jpg')
+        cv2.imwrite('-1.jpg', img)
+        img = cv2.imread('-1.jpg')
         for box in gt:
             x1, y1, x2, y2, _ = box
             x1 *= img_size
