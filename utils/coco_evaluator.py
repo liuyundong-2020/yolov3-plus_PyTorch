@@ -4,7 +4,7 @@ import tempfile
 from pycocotools.cocoeval import COCOeval
 from torch.autograd import Variable
 
-from data.cocodataset import *
+from data.coco2017 import *
 from data import *
 
 
@@ -13,9 +13,6 @@ import tempfile
 
 from pycocotools.cocoeval import COCOeval
 from torch.autograd import Variable
-
-from data.cocodataset import *
-from data import *
 
 
 class COCOAPIEvaluator():

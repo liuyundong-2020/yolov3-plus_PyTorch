@@ -300,7 +300,7 @@ class YOLOv3Plus(nn.Module):
             # [B, H*W*anchor_n, num_cls]
             cls_pred = pred[:, :, 1 * self.num_anchors : (1 + self.num_classes) * self.num_anchors].contiguous().view(B_, H_*W_*self.num_anchors, self.num_classes)
             # [B, H*W*anchor_n, 4]
-            txtytwth_pred = pred[:, :, (1 + self.num_classes) * self.num_anchors:].contiguous().view(B, HW, self.num_anchors, 4)
+            txtytwth_pred = pred[:, :, (1 + self.num_classes) * self.num_anchors:].contiguous()
 
             total_conf_pred.append(conf_pred)
             total_cls_pred.append(cls_pred)
@@ -313,7 +313,8 @@ class YOLOv3Plus(nn.Module):
         txtytwth_pred = torch.cat(total_txtytwth_pred, dim=1)
         
         # train
-        if self.trainable:            
+        if self.trainable:         
+            txtytwth_pred = txtytwth_pred.view(B, HW, self.num_anchors, 4)   
             # decode bboxes
             x1y1x2y2_pred = (self.decode_boxes(txtytwth_pred) / self.input_size).view(-1, 4)
             x1y1x2y2_gt = target[:, :, 7:].view(-1, 4)

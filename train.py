@@ -132,7 +132,7 @@ def train():
         train_size = cfg['train_size']
         val_size = cfg['val_size']
     else:
-        train_size = val_size = cfg['val_size']
+        train_size = val_size = cfg['train_size']
 
     # EMA trick
     if args.ema:
@@ -279,7 +279,7 @@ def train():
                 # randomly choose a new size
                 r = cfg['random_size_range']
                 train_size = random.randint(r[0], r[1]) * 32
-                model.set_grid(train_size)
+                model.module.set_grid(train_size) if args.distributed else model.set_grid(train_size)
             if args.multi_scale:
                 # interpolate
                 images = torch.nn.functional.interpolate(images, size=train_size, mode='bilinear', align_corners=False)
@@ -289,7 +289,7 @@ def train():
             # vis_data(images, targets, train_size)
             # continue
             targets = tools.multi_gt_creator(input_size=train_size, 
-                                             stride=net.stride, 
+                                             strides=net.stride, 
                                              label_lists=targets, 
                                              anchor_size=anchor_size,
                                              ignore_thresh=cfg['ignore_thresh']
