@@ -26,7 +26,7 @@ class YOLOv3Plus(nn.Module):
         self.nms_thresh = nms_thresh
         self.stride = [8, 16, 32]
         self.bk = bk
-        self.anchor_size = torch.tensor(anchor_size).view(len(self.stride), len(anchor_size) // 3, 2)
+        self.anchor_size = torch.tensor(anchor_size).reshape(len(self.stride), len(anchor_size) // 3, 2)
         self.num_anchors = self.anchor_size.size(1)
         self.grid_cell, self.stride_tensor, self.anchors_wh = self.create_grid(img_size)
 
@@ -76,7 +76,7 @@ class YOLOv3Plus(nn.Module):
             ws, hs = w // s, h // s
             grid_y, grid_x = torch.meshgrid([torch.arange(hs), torch.arange(ws)])
             grid_xy = torch.stack([grid_x, grid_y], dim=-1).float()
-            grid_xy = grid_xy.view(1, hs*ws, 1, 2)
+            grid_xy = grid_xy.reshape(1, hs*ws, 1, 2)
 
             # generate stride tensor
             stride_tensor = torch.ones([1, hs*ws, self.num_anchors, 2]) * s
@@ -115,7 +115,7 @@ class YOLOv3Plus(nn.Module):
         # b_h = anchor_h * exp(th)
         b_wh_pred = torch.exp(reg_pred[:, :, :, 2:]) * self.anchors_wh
         # [B, H*W, anchor_n, 4] -> [B, H*W*anchor_n, 4]
-        xywh_pred = torch.cat([c_xy_pred, b_wh_pred], -1).view(B, HW*ab_n, 4)
+        xywh_pred = torch.cat([c_xy_pred, b_wh_pred], -1).reshape(B, HW*ab_n, 4)
 
         return xywh_pred
 
