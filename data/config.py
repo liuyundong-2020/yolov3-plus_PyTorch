@@ -6,7 +6,7 @@ yolov3plus_cfg = {
     'backbone': 'cd53',
     # for multi-scale trick
     'train_size': 640,
-    'val_size': 416,
+    'val_size': 640,
     'random_size_range': [10, 20],
     # anchor size
     'anchor_size': [[10, 13],   [16, 30],   [33, 23],
