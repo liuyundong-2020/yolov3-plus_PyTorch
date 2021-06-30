@@ -121,11 +121,11 @@ def set_anchors(anchor_size):
     return anchor_boxes
 
 
-def multi_gt_creator(input_size, strides, label_lists, anchor_size, igt=0.5):
+def multi_gt_creator(img_size, strides, label_lists, anchor_size, igt=0.5):
     """creator multi scales gt"""
     # prepare the all empty gt datas
     batch_size = len(label_lists)
-    h = w = input_size
+    h = w = img_size
     num_scale = len(strides)
     gt_tensor = []
     num_anchors = len(anchor_size) // num_scale

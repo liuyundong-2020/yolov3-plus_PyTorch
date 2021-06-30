@@ -185,7 +185,7 @@ def train():
     # build model
     anchor_size = cfg['anchor_size']
     net = yolov3p_net(device=device, 
-                        input_size=train_size, 
+                        img_size=train_size, 
                         num_classes=num_classes, 
                         trainable=True, 
                         anchor_size=anchor_size, 
@@ -291,7 +291,7 @@ def train():
             targets = [label.tolist() for label in targets]
             # vis_data(images, targets, train_size)
             # continue
-            targets = tools.multi_gt_creator(input_size=train_size, 
+            targets = tools.multi_gt_creator(img_size=train_size, 
                                              strides=net.stride, 
                                              label_lists=targets, 
                                              anchor_size=anchor_size,
