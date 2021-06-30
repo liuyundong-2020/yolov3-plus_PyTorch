@@ -303,7 +303,7 @@ def train():
             targets = torch.tensor(targets).float().to(device)
 
             # forward
-            obj_loss, cls_loss, reg_loss, total_loss = model(images, target=targets)
+            obj_loss, cls_loss, reg_loss, total_loss = model(images, targets=targets)
 
             loss_dict = dict(
                 obj_loss=obj_loss,
