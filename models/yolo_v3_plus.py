@@ -7,10 +7,19 @@ import numpy as np
 import tools
 
 class YOLOv3Plus(nn.Module):
-    def __init__(self, device, input_size=None, num_classes=20, trainable=False, conf_thresh=0.001, nms_thresh=0.50, anchor_size=None, hr=False, bk='cd53'):
+    def __init__(self, 
+                 device, 
+                 img_size=640, 
+                 num_classes=80, 
+                 trainable=False, 
+                 conf_thresh=0.001, 
+                 nms_thresh=0.60, 
+                 anchor_size=None, 
+                 hr=False, 
+                 bk='cd53'):
         super(YOLOv3Plus, self).__init__()
         self.device = device
-        self.input_size = input_size
+        self.img_size = img_size
         self.num_classes = num_classes
         self.trainable = trainable
         self.conf_thresh = conf_thresh
@@ -19,7 +28,7 @@ class YOLOv3Plus(nn.Module):
         self.bk = bk
         self.anchor_size = torch.tensor(anchor_size).view(len(self.stride), len(anchor_size) // 3, 2)
         self.num_anchors = self.anchor_size.size(1)
-        self.grid_cell, self.stride_tensor, self.all_anchors_wh = self.create_grid(input_size)
+        self.grid_cell, self.stride_tensor, self.anchors_wh = self.create_grid(img_size)
 
         # backbone
         if self.bk == 'cd53':
@@ -57,11 +66,11 @@ class YOLOv3Plus(nn.Module):
         self.head_det_3 = nn.Conv2d(c5, self.num_anchors * (1 + self.num_classes + 4), 1)
 
 
-    def create_grid(self, input_size):
+    def create_grid(self, img_size):
         total_grid_xy = []
         total_stride = []
         total_anchor_wh = []
-        w, h = input_size, input_size
+        w, h = img_size, img_size
         for ind, s in enumerate(self.stride):
             # generate grid cells
             ws, hs = w // s, h // s
@@ -86,40 +95,40 @@ class YOLOv3Plus(nn.Module):
         return total_grid_xy, total_stride, total_anchor_wh
 
 
-    def set_grid(self, input_size):
-        self.input_size = input_size
-        self.grid_cell, self.stride_tensor, self.all_anchors_wh = self.create_grid(input_size)
+    def set_grid(self, img_size):
+        self.img_size = img_size
+        self.grid_cell, self.stride_tensor, self.anchors_wh = self.create_grid(img_size)
 
 
-    def decode_xywh(self, txtytwth_pred):
+    def decode_xywh(self, reg_pred):
         """
             Input:
-                txtytwth_pred : [B, H*W, anchor_n, 4] containing [tx, ty, tw, th]
+                reg_pred : [B, H*W, anchor_n, 4] containing [tx, ty, tw, th]
             Output:
                 xywh_pred : [B, H*W*anchor_n, 4] containing [x, y, w, h]
         """
         # b_x = sigmoid(tx) + gride_x
         # b_y = sigmoid(ty) + gride_y
-        B, HW, ab_n, _ = txtytwth_pred.size()
-        c_xy_pred = (torch.sigmoid(txtytwth_pred[:, :, :, :2]) + self.grid_cell) * self.stride_tensor
+        B, HW, ab_n, _ = reg_pred.size()
+        c_xy_pred = (torch.sigmoid(reg_pred[:, :, :, :2]) + self.grid_cell) * self.stride_tensor
         # b_w = anchor_w * exp(tw)
         # b_h = anchor_h * exp(th)
-        b_wh_pred = torch.exp(txtytwth_pred[:, :, :, 2:]) * self.all_anchors_wh
+        b_wh_pred = torch.exp(reg_pred[:, :, :, 2:]) * self.anchors_wh
         # [B, H*W, anchor_n, 4] -> [B, H*W*anchor_n, 4]
         xywh_pred = torch.cat([c_xy_pred, b_wh_pred], -1).view(B, HW*ab_n, 4)
 
         return xywh_pred
 
 
-    def decode_boxes(self, txtytwth_pred):
+    def decode_boxes(self, reg_pred):
         """
             Input:
-                txtytwth_pred : [B, H*W, anchor_n, 4] containing [tx, ty, tw, th]
+                reg_pred : [B, H*W, anchor_n, 4] containing [tx, ty, tw, th]
             Output:
                 x1y1x2y2_pred : [B, H*W, anchor_n, 4] containing [xmin, ymin, xmax, ymax]
         """
         # [B, H*W*anchor_n, 4]
-        xywh_pred = self.decode_xywh(txtytwth_pred)
+        xywh_pred = self.decode_xywh(reg_pred)
 
         # [center_x, center_y, w, h] -> [xmin, ymin, xmax, ymax]
         x1y1x2y2_pred = torch.zeros_like(xywh_pred)
@@ -163,60 +172,6 @@ class YOLOv3Plus(nn.Module):
         return keep
 
 
-    def diou_nms(self, dets, scores):
-        """"Pure Python DIoU-NMS baseline."""
-        x1 = dets[:, 0]  #xmin
-        y1 = dets[:, 1]  #ymin
-        x2 = dets[:, 2]  #xmax
-        y2 = dets[:, 3]  #ymax
-
-        areas = (x2 - x1) * (y2 - y1)                 # the size of bbox
-        order = scores.argsort()[::-1]                        # sort bounding boxes by decreasing order
-
-        keep = []                                             # store the final bounding boxes
-        while order.size > 0:
-            i = order[0]                                      #the index of the bbox with highest confidence
-            keep.append(i)                                    #save it to keep
-            # compute iou
-            xx1 = np.maximum(x1[i], x1[order[1:]])
-            yy1 = np.maximum(y1[i], y1[order[1:]])
-            xx2 = np.minimum(x2[i], x2[order[1:]])
-            yy2 = np.minimum(y2[i], y2[order[1:]])
-
-            w = np.maximum(1e-28, xx2 - xx1)
-            h = np.maximum(1e-28, yy2 - yy1)
-            inter = w * h
-
-            iou = inter / (areas[i] + areas[order[1:]] - inter)
-            # compute diou
-            # # compute the length of diagonal line
-            x1_, x2_ = x1[i].repeat(len(order[1:])), x2[i:i+1].repeat(len(order[1:]))
-            y1_, y2_ = y1[i].repeat(len(order[1:])), y2[i:i+1].repeat(len(order[1:]))
-            x1234 = np.stack([x1_, x2_, x1[order[1:]], x2[order[1:]]], axis=1)
-            y1234 = np.stack([y1_, y2_, y1[order[1:]], y2[order[1:]]], axis=1)
-
-            C = np.sqrt((np.max(x1234, axis=1) - np.min(x1234, axis=1))**2 + \
-                        (np.max(y1234, axis=1) - np.min(y1234, axis=1))**2)
-            # # compute the distance between two center point
-            # # # points-1
-            points_1_x = (x1_ + x2_) / 2.
-            points_1_y = (y1_ + y2_) / 2.
-            # # points-2
-            points_2_x = (x1[order[1:]] + x2[order[1:]]) / 2.
-            points_2_y = (y1[order[1:]] + y2[order[1:]]) / 2.
-            D = np.sqrt((points_2_x - points_1_x)**2 + (points_2_y - points_1_y)**2)
-
-            lens = D**2 / (C**2 + 1e-20)
-            diou = iou - lens
-
-            ovr = diou                
-            #reserve all the boundingbox whose ovr less than thresh
-            inds = np.where(ovr <= self.nms_thresh)[0]
-            order = order[inds + 1]
-
-        return keep
-
-
     def postprocess(self, bboxes, scores):
         """
         bboxes: (HxW, 4), bsize = 1
@@ -251,7 +206,7 @@ class YOLOv3Plus(nn.Module):
         return bboxes, scores, cls_inds
 
 
-    def forward(self, x, target=None):
+    def forward(self, x, targets=None):
         # backbone
         c3, c4, c5 = self.backbone(x)
 
@@ -284,79 +239,63 @@ class YOLOv3Plus(nn.Module):
         pred_l = self.head_det_3(c19)
 
         preds = [pred_s, pred_m, pred_l]
-        total_conf_pred = []
+        total_obj_pred = []
         total_cls_pred = []
-        total_txtytwth_pred = []
+        total_reg_pred = []
         B = HW = 0
         for pred in preds:
             B_, abC_, H_, W_ = pred.size()
 
             # [B, anchor_n * C, H, W] -> [B, H, W, anchor_n * C] -> [B, H*W, anchor_n*C]
-            pred = pred.permute(0, 2, 3, 1).contiguous().view(B_, H_*W_, abC_)
+            pred = pred.permute(0, 2, 3, 1).reshape(B_, H_*W_, abC_)
 
             # Divide prediction to obj_pred, xywh_pred and cls_pred   
             # [B, H*W*anchor_n, 1]
-            conf_pred = pred[:, :, :1 * self.num_anchors].contiguous().view(B_, H_*W_*self.num_anchors, 1)
+            obj_pred = pred[:, :, :1 * self.num_anchors].reshape(B_, H_*W_*self.num_anchors, -1)
             # [B, H*W*anchor_n, num_cls]
-            cls_pred = pred[:, :, 1 * self.num_anchors : (1 + self.num_classes) * self.num_anchors].contiguous().view(B_, H_*W_*self.num_anchors, self.num_classes)
+            cls_pred = pred[:, :, 1 * self.num_anchors : (1 + self.num_classes) * self.num_anchors].reshape(B_, H_*W_*self.num_anchors, -1)
             # [B, H*W*anchor_n, 4]
-            txtytwth_pred = pred[:, :, (1 + self.num_classes) * self.num_anchors:].contiguous()
+            reg_pred = pred[:, :, (1 + self.num_classes) * self.num_anchors:].reshape(B_, H_*W_, self.num_anchors, -1)
 
-            total_conf_pred.append(conf_pred)
+            total_obj_pred.append(obj_pred)
             total_cls_pred.append(cls_pred)
-            total_txtytwth_pred.append(txtytwth_pred)
+            total_reg_pred.append(reg_pred)
             B = B_
             HW += H_*W_
         
-        conf_pred = torch.cat(total_conf_pred, dim=1)
+        obj_pred = torch.cat(total_obj_pred, dim=1)
         cls_pred = torch.cat(total_cls_pred, dim=1)
-        txtytwth_pred = torch.cat(total_txtytwth_pred, dim=1)
+        reg_pred = torch.cat(total_reg_pred, dim=1)
         
         # train
-        if self.trainable:         
-            txtytwth_pred = txtytwth_pred.view(B, HW, self.num_anchors, 4)   
-            # decode bboxes
-            x1y1x2y2_pred = (self.decode_boxes(txtytwth_pred) / self.input_size).view(-1, 4)
-            x1y1x2y2_gt = target[:, :, 7:].view(-1, 4)
-
-            # compute the IoU between pred bboxes and gt bboxes
-            iou_pred = tools.iou_score(x1y1x2y2_pred, x1y1x2y2_gt).view(B, -1, 1)
-
-            # set IoU as the label of conf
-            with torch.no_grad():
-                gt_conf = iou_pred.clone()
-
-            txtytwth_pred = txtytwth_pred.view(B, -1, 4)
-            # [obj, cls, txtytwth, scale_weight, x1y1x2y2] -> [conf, obj, cls, txtytwth, scale_weight]
-            target = torch.cat([gt_conf, target[:, :, :7]], dim=2)
+        if self.trainable:           
+            # decode bbox
+            box_pred = (self.decode_boxes(reg_pred) / self.img_size)
 
             # loss
-            conf_loss, cls_loss, bbox_loss, iou_loss, total_loss = tools.loss(pred_conf=conf_pred, 
-                                                                                pred_cls=cls_pred,
-                                                                                pred_txtytwth=txtytwth_pred,
-                                                                                pred_iou=iou_pred,
-                                                                                label=target
-                                                                                )
+            obj_loss, cls_loss, reg_loss, total_loss = tools.loss(pred_obj=obj_pred,
+                                                                  pred_cls=cls_pred,
+                                                                  pred_box=box_pred,
+                                                                  targets=targets)
 
-            return conf_loss, cls_loss, bbox_loss, iou_loss, total_loss 
-                       
+            return obj_loss, cls_loss, reg_loss, total_loss
+
         # test
         else:
-            txtytwth_pred = txtytwth_pred.view(B, HW, self.num_anchors, 4)
             with torch.no_grad():
                 # batch size = 1
                 # [B, H*W*num_anchor, 1] -> [H*W*num_anchor, 1]
-                conf_pred = torch.sigmoid(conf_pred)[0]
+                obj_pred = torch.sigmoid(obj_pred)[0]
                 # [B, H*W*num_anchor, 4] -> [H*W*num_anchor, 4]
-                bboxes = torch.clamp((self.decode_boxes(txtytwth_pred) / self.input_size)[0], 0., 1.)
+                bboxes = torch.clamp((self.decode_boxes(reg_pred) / self.img_size)[0], 0., 1.)
                 # [B, H*W*num_anchor, C] -> [H*W*num_anchor, C], 
-                scores = torch.softmax(cls_pred[0, :, :], dim=1) * conf_pred
+                scores = torch.softmax(cls_pred[0, :, :], dim=1) * obj_pred
 
-                # to cpu
+                # 将预测放在cpu处理上，以便进行后处理
                 scores = scores.to('cpu').numpy()
                 bboxes = bboxes.to('cpu').numpy()
 
-                # post-process
+                # 后处理
                 bboxes, scores, cls_inds = self.postprocess(bboxes, scores)
 
                 return bboxes, scores, cls_inds

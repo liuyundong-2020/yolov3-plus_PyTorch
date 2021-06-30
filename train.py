@@ -258,6 +258,9 @@ def train():
     best_map = 0.
     t0 = time.time()
     for epoch in range(args.start_epoch, max_epoch):
+        # set epoch if DDP
+        if args.distributed:
+            dataloader.sampler.set_epoch(epoch)
 
         # use step lr
         if epoch in cfg['lr_epoch']:
@@ -292,7 +295,7 @@ def train():
                                              strides=net.stride, 
                                              label_lists=targets, 
                                              anchor_size=anchor_size,
-                                             ignore_thresh=cfg['ignore_thresh']
+                                             igt=cfg['ignore_thresh']
                                             )
                                         
             # to device
@@ -300,13 +303,12 @@ def train():
             targets = torch.tensor(targets).float().to(device)
 
             # forward
-            conf_loss, cls_loss, reg_loss, iou_loss, total_loss = model(images, target=targets)
+            obj_loss, cls_loss, reg_loss, total_loss = model(images, target=targets)
 
             loss_dict = dict(
-                conf_loss=conf_loss,
+                obj_loss=obj_loss,
                 cls_loss=cls_loss,
                 reg_loss=reg_loss,
-                iou_loss=iou_loss,
                 total_loss=total_loss
             )
             loss_dict_reduced = distributed_utils.reduce_loss_dict(loss_dict)
@@ -324,21 +326,22 @@ def train():
             if iter_i % 10 == 0:
                 if args.tfboard:
                     # viz loss
-                    tblogger.add_scalar('conf loss', loss_dict_reduced['conf_loss'].item(), iter_i + epoch * epoch_size)
+                    tblogger.add_scalar('obj loss',  loss_dict_reduced['obj_loss'].item(),  iter_i + epoch * epoch_size)
                     tblogger.add_scalar('cls loss',  loss_dict_reduced['cls_loss'].item(),  iter_i + epoch * epoch_size)
                     tblogger.add_scalar('reg loss',  loss_dict_reduced['reg_loss'].item(),  iter_i + epoch * epoch_size)
-                    tblogger.add_scalar('iou loss',  loss_dict_reduced['iou_loss'].item(),  iter_i + epoch * epoch_size)
                 
                 t1 = time.time()
-                print('[Epoch %d/%d][Iter %d/%d][lr %.6f]'
-                    '[Loss: conf %.2f || cls %.2f || reg %.2f || iou %.2f || size %d || time: %.2f]'
-                        % (epoch+1, max_epoch, iter_i, epoch_size, tmp_lr,
-                            loss_dict_reduced['conf_loss'].item(), 
-                            loss_dict_reduced['cls_loss'].item(), 
-                            loss_dict_reduced['reg_loss'].item(), 
-                            loss_dict_reduced['iou_loss'].item(),
-                            train_size, 
-                            t1-t0),
+                print('[Epoch %d/%d][Iter %d/%d][lr %.6f][Loss: obj %.2f || cls %.2f || reg %.2f || size %d || time: %.2f]'
+                        % (epoch+1, 
+                           max_epoch, 
+                           iter_i, 
+                           epoch_size, 
+                           tmp_lr,
+                           loss_dict_reduced['obj_loss'].item(), 
+                           loss_dict_reduced['cls_loss'].item(), 
+                           loss_dict_reduced['reg_loss'].item(), 
+                           train_size, 
+                           t1-t0),
                         flush=True)
 
                 t0 = time.time()
